@@ -12,13 +12,11 @@ export function parseMessageSegments(text: string, emotes: ChatEmote[]): Message
     return [{ type: 'text', content: text }];
   }
 
-  // Sort emotes by start index ascending
   const sortedEmotes = [...emotes].sort((a, b) => a.start - b.start);
   const chunks: MessageChunk[] = [];
   let lastIndex = 0;
 
   for (const emote of sortedEmotes) {
-    // If there is gap between last position and emote start, add text chunk
     if (emote.start > lastIndex) {
       chunks.push({
         type: 'text',
@@ -26,7 +24,6 @@ export function parseMessageSegments(text: string, emotes: ChatEmote[]): Message
       });
     }
 
-    // Add emote chunk
     chunks.push({
       type: 'emote',
       content: emote.name || text.slice(emote.start, emote.end + 1),
@@ -36,7 +33,6 @@ export function parseMessageSegments(text: string, emotes: ChatEmote[]): Message
     lastIndex = emote.end + 1;
   }
 
-  // Add trailing text
   if (lastIndex < text.length) {
     chunks.push({
       type: 'text',
@@ -50,27 +46,27 @@ export function parseMessageSegments(text: string, emotes: ChatEmote[]): Message
 export const MessageRenderer: React.FC<{
   text: string;
   emotes: ChatEmote[];
-  isAction?: boolean;
-}> = ({ text, emotes, isAction }) => {
+}> = ({ text, emotes }) => {
   const chunks = parseMessageSegments(text, emotes);
 
   return (
-    <span className={isAction ? 'italic opacity-90' : ''}>
+    <>
       {chunks.map((chunk, idx) => {
         if (chunk.type === 'emote' && chunk.emoteId) {
           return (
             <img
               key={idx}
-              src={`https://static-cdn.jtvnw.net/emoticons/v2/${chunk.emoteId}/default/dark/2.0`}
+              className={`emoticon ttv-emo-${chunk.emoteId}`}
+              src={`https://static-cdn.jtvnw.net/emoticons/v2/${chunk.emoteId}/default/dark/1.0`}
+              srcSet={`https://static-cdn.jtvnw.net/emoticons/v2/${chunk.emoteId}/default/dark/2.0 2x, https://static-cdn.jtvnw.net/emoticons/v2/${chunk.emoteId}/default/dark/3.0 4x`}
               alt={chunk.content}
               title={chunk.content}
-              className="inline-block mx-0.5 align-middle max-h-[1.5em] w-auto select-none"
               loading="lazy"
             />
           );
         }
         return <span key={idx}>{chunk.content}</span>;
       })}
-    </span>
+    </>
   );
 };

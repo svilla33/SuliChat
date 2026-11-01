@@ -1,0 +1,91 @@
+/* ==========================================================================
+   KapChat "Simple" Style (Classic NightDev)
+   Exact replicate of https://nightdev.com/hosted/obschat
+   ========================================================================== */
+
+body {
+    overflow: hidden;
+    margin: 5px;
+    background-color: transparent;
+}
+
+#chat_box {
+    background-color: transparent;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    position: absolute;
+    overflow: hidden;
+    color: #D3D3D3;
+    border-radius: 4px;
+    width: calc(100% - 10px);
+    height: calc(100% - 10px);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.nick {
+    font-weight: bold;
+}
+
+.tag {
+    vertical-align: bottom;
+    height: 18px;
+    width: 18px;
+    padding: 0;
+    margin-right: 3px;
+    margin-bottom: -1px;
+    border-radius: 2px;
+    -moz-border-radius: 2px;
+    -webkit-border-radius: 2px;
+    display: inline-block;
+}
+
+.badges {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 3px;
+}
+
+.chat_line {
+    margin-left: 3px;
+    margin-right: 3px;
+    padding-top: 2px;
+    padding-bottom: 3px;
+    line-height: 16px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.message {
+    display: inline;
+}
+
+.colon {
+    display: inline;
+}
+
+.chat_line .time_stamp {
+    display: none;
+    padding-right: 3px;
+}
+
+.emoticon {
+    margin-bottom: -7px;
+    vertical-align: middle;
+    display: inline-block;
+    max-height: 28px;
+}
+
+.cheermote {
+    width: auto;
+    max-height: 28px;
+}
+
+.emoji {
+    width: 20px;
+    height: auto;
+}

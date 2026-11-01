@@ -7,79 +7,99 @@ import {
   Settings2,
   Tv,
   Sparkles,
-  Sliders,
+  Palette,
   Info,
   Radio,
-  Send
+  Send,
+  FolderOpen
 } from 'lucide-react';
 import { ChatOverlay } from './components/ChatOverlay';
-import { DEFAULT_SETTINGS, type ChatSettings, type ChatTheme } from './types/settings';
+import { DEFAULT_SETTINGS, type ChatSettings } from './types/settings';
 import type { ChatMessage } from './services/twitchChat';
 import { loadBadgesForChannel } from './services/twitchBadges';
+import { REGISTERED_STYLES } from './styles/registry';
 
 export const App: React.FC = () => {
-  // Query param parsing for OBS browser source mode
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
-  const isOverlayMode = searchParams.get('overlay') === 'true' || searchParams.get('standalone') === 'true';
+  const isOverlayMode =
+    searchParams.get('overlay') === 'true' ||
+    searchParams.get('standalone') === 'true' ||
+    window.location.pathname.includes('/obschat');
 
-  // State
+  // Initialize settings from URL params matching KapChat query format
   const [settings, setSettings] = useState<ChatSettings>(() => {
     const channelParam = searchParams.get('channel') || '';
-    const themeParam = (searchParams.get('theme') as ChatTheme) || DEFAULT_SETTINGS.theme;
-    const fontSizeParam = parseInt(searchParams.get('fontSize') || `${DEFAULT_SETTINGS.fontSize}`, 10);
-    const fadeParam = parseInt(searchParams.get('fade') || `${DEFAULT_SETTINGS.fadeSeconds}`, 10);
-    const badgesParam = searchParams.has('badges') ? searchParams.get('badges') === 'true' : DEFAULT_SETTINGS.showBadges;
-    const strokeParam = searchParams.has('stroke') ? searchParams.get('stroke') === 'true' : DEFAULT_SETTINGS.strokeEffect;
+    const styleParam = searchParams.get('style') || DEFAULT_SETTINGS.style;
+
+    // Fade can be 'false', 'true', or a number like '30'
+    const fadeParam = searchParams.get('fade');
+    let fadeSec = DEFAULT_SETTINGS.fadeSeconds;
+    if (fadeParam === 'true') fadeSec = 30;
+    else if (fadeParam && fadeParam !== 'false') {
+      const parsed = parseInt(fadeParam, 10);
+      if (!isNaN(parsed)) fadeSec = parsed;
+    }
+
+    const botActivityParam = searchParams.get('bot_activity') === 'true';
+    const preventClippingParam = searchParams.get('prevent_clipping') === 'true';
+    const badgesParam = searchParams.get('badges') !== 'false';
 
     return {
       channel: channelParam,
-      theme: themeParam,
-      fontSize: isNaN(fontSizeParam) ? DEFAULT_SETTINGS.fontSize : fontSizeParam,
-      fadeSeconds: isNaN(fadeParam) ? DEFAULT_SETTINGS.fadeSeconds : fadeParam,
+      style: styleParam,
+      fadeSeconds: fadeSec,
+      botActivity: botActivityParam,
+      preventClipping: preventClippingParam,
       showBadges: badgesParam,
-      strokeEffect: strokeParam,
-      compactMode: false,
-      soundAlert: false,
     };
   });
 
   const [inputChannel, setInputChannel] = useState(settings.channel);
   const [copied, setCopied] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    'connecting' | 'connected' | 'disconnected' | 'error'
+  >('disconnected');
+  const [previewBg, setPreviewBg] = useState<'dark' | 'transparent' | 'white'>('dark');
   const [mockMessages, setMockMessages] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
     loadBadgesForChannel(settings.channel);
   }, [settings.channel]);
 
-  const sampleMessages: Array<{ user: string; text: string; color: string; badges: Array<{ type: string; version: string }>; emotes: Array<{ id: string; start: number; end: number; name: string }> }> = [
+  const sampleMessages: Array<{
+    user: string;
+    text: string;
+    color: string;
+    badges: Array<{ type: string; version: string }>;
+    emotes: Array<{ id: string; start: number; end: number; name: string }>;
+  }> = [
     {
-      user: 'SuliDev',
-      text: '¡Hola a todos! Bienvenidos al stream PogChamp',
-      color: '#A855F7',
+      user: 'Carola',
+      text: '¡Bienvenidos todos al stream! PogChamp',
+      color: '#FF0000',
       badges: [{ type: 'broadcaster', version: '1' }, { type: 'partner', version: '1' }],
-      emotes: [{ id: '88', start: 39, end: 46, name: 'PogChamp' }],
+      emotes: [{ id: '88', start: 36, end: 43, name: 'PogChamp' }],
     },
     {
       user: 'ModMaster',
-      text: 'Recordad seguir las reglas del chat Kappa',
+      text: 'Recuerden respetar las normas de la comunidad Kappa',
       color: '#10B981',
-      badges: [{ type: 'moderator', version: '1' }, { type: 'glhf-pledge', version: '1' }],
-      emotes: [{ id: '25', start: 36, end: 40, name: 'Kappa' }],
+      badges: [{ type: 'moderator', version: '1' }],
+      emotes: [{ id: '25', start: 47, end: 51, name: 'Kappa' }],
     },
     {
       user: 'SuperVIP',
-      text: '¿A qué juego le damos hoy? LUL',
-      color: '#EC4899',
-      badges: [{ type: 'vip', version: '1' }, { type: 'sub-gift-leader', version: '1' }],
-      emotes: [{ id: '425618', start: 27, end: 29, name: 'LUL' }],
+      text: 'Probando el nuevo estilo de chat LUL',
+      color: '#A855F7',
+      badges: [{ type: 'vip', version: '1' }],
+      emotes: [{ id: '425618', start: 33, end: 35, name: 'LUL' }],
     },
     {
       user: 'ViewerFiel',
-      text: '¡El mejor setup de overlay que he visto! VoHiYo',
+      text: '¡El estilo KapChat idéntico a NightDev! VoHiYo',
       color: '#3B82F6',
-      badges: [{ type: 'subscriber', version: '1' }, { type: 'premium', version: '1' }, { type: 'twitch-recap-2024', version: '1' }],
-      emotes: [{ id: '81274', start: 43, end: 48, name: 'VoHiYo' }],
+      badges: [{ type: 'subscriber', version: '1' }, { type: 'premium', version: '1' }],
+      emotes: [{ id: '81274', start: 41, end: 46, name: 'VoHiYo' }],
     },
   ];
 
@@ -100,18 +120,17 @@ export const App: React.FC = () => {
     setMockMessages((prev) => [...prev.slice(-30), newMsg]);
   };
 
-  // Handle URL generation for OBS
+  // Generate exact KapChat style URL for OBS
   const generatedUrl = useMemo(() => {
     if (!settings.channel) return '';
     const baseUrl = `${window.location.origin}${window.location.pathname}`;
     const params = new URLSearchParams();
     params.set('channel', settings.channel);
+    params.set('style', settings.style || 'simple');
+    params.set('fade', settings.fadeSeconds > 0 ? settings.fadeSeconds.toString() : 'false');
+    params.set('bot_activity', settings.botActivity ? 'true' : 'false');
+    params.set('prevent_clipping', settings.preventClipping ? 'true' : 'false');
     params.set('overlay', 'true');
-    if (settings.theme !== DEFAULT_SETTINGS.theme) params.set('theme', settings.theme);
-    if (settings.fontSize !== DEFAULT_SETTINGS.fontSize) params.set('fontSize', settings.fontSize.toString());
-    if (settings.fadeSeconds !== DEFAULT_SETTINGS.fadeSeconds) params.set('fade', settings.fadeSeconds.toString());
-    if (!settings.showBadges) params.set('badges', 'false');
-    if (!settings.strokeEffect) params.set('stroke', 'false');
 
     return `${baseUrl}?${params.toString()}`;
   }, [settings]);
@@ -129,18 +148,10 @@ export const App: React.FC = () => {
     setSettings((prev) => ({ ...prev, channel: clean }));
   };
 
-  // Ensure white background on overlay mode
-  useEffect(() => {
-    if (isOverlayMode) {
-      document.body.style.backgroundColor = '#ffffff';
-      document.body.style.color = '#0f172a';
-    }
-  }, [isOverlayMode]);
-
-  // If in overlay mode (for OBS Browser Source), render strictly the chat widget on white background
+  // OBS Overlay Mode: render strictly the chat box with modular style loaded
   if (isOverlayMode) {
     return (
-      <main className="w-screen h-screen bg-white text-slate-900 overflow-hidden">
+      <main className="w-screen h-screen bg-transparent overflow-hidden m-0 p-0">
         <ChatOverlay settings={settings} isStandalone={true} />
       </main>
     );
@@ -148,7 +159,7 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-purple-600 selection:text-white">
-      {/* Top Navigation Bar */}
+      {/* Header */}
       <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -160,14 +171,14 @@ export const App: React.FC = () => {
                 SuliChat
               </span>
               <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-900/50 text-purple-300 border border-purple-700/50">
-                v0.1.0 Beta
+                NightDev KapChat Modular
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
             <span className="text-xs text-slate-400 hidden sm:inline-block">
-              Open Source Streamer Overlay Suite
+              Open Source Streamer Tools Suite
             </span>
             <a
               href="https://github.com/svilla33/SuliChat"
@@ -184,21 +195,25 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
-        {/* Hero banner */}
+        {/* Banner */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border border-purple-900/40 bg-gradient-to-r from-purple-950/40 via-slate-900 to-indigo-950/30 rounded-2xl p-6 shadow-xl">
           <div className="space-y-1">
             <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-purple-400" />
-              Twitch Chat Overlay Widget
+              NightDev KapChat Replicate & Style Studio
             </h1>
             <p className="text-slate-400 text-sm sm:text-base max-w-2xl">
-              Alternativa libre, ligera y 100% open-source a KapChat. Conexión directa a Twitch WebSocket IRC sin backend ni registros.
+              Copia libre de KapChat con arquitectura modular para estilos. Crea carpetas en{' '}
+              <code className="text-purple-300 font-mono text-xs bg-slate-950 px-1.5 py-0.5 rounded border border-purple-900/50">
+                public/chat-styles/
+              </code>{' '}
+              con tu propio HTML, CSS y JS.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700/60 text-xs">
               <Radio
                 className={`w-3.5 h-3.5 ${
@@ -222,9 +237,9 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* 2-Columns Layout: Configurator & Live Chat Preview */}
+        {/* 2-Columns: Generator on left, Live Style Preview on right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Settings and OBS link (7 cols) */}
+          {/* Left Column (7 cols) */}
           <div className="lg:col-span-7 space-y-6">
             {/* Channel Input Card */}
             <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
@@ -241,7 +256,7 @@ export const App: React.FC = () => {
                     type="text"
                     value={inputChannel}
                     onChange={(e) => setInputChannel(e.target.value)}
-                    placeholder="Ejemplo: ibai, shroud, midudev..."
+                    placeholder="Ejemplo: carola, ibai, shroud..."
                     className="w-full bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl pl-8 pr-4 py-2.5 text-white placeholder-slate-500 outline-none transition"
                   />
                 </div>
@@ -252,110 +267,108 @@ export const App: React.FC = () => {
                   Conectar
                 </button>
               </form>
-              <p className="text-xs text-slate-500">
-                Pon tu nombre de usuario de Twitch y verás el chat aparecer en el visor al instante.
-              </p>
             </div>
 
-            {/* Customization Options */}
+            {/* Chat Styles Modular Card */}
             <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-5">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Sliders className="w-5 h-5 text-purple-400" />
-                2. Personalización Visual
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Palette className="w-5 h-5 text-purple-400" />
+                  2. Estilos Modulares (Chat Styles)
+                </h2>
+                <span className="text-xs text-purple-400 font-mono flex items-center gap-1">
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  public/chat-styles/
+                </span>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Theme Selector */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    Tema
-                  </label>
-                  <select
-                    value={settings.theme}
-                    onChange={(e) =>
-                      setSettings((prev) => ({ ...prev, theme: e.target.value as ChatTheme }))
-                    }
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-purple-500"
-                  >
-                    <option value="light">Claro (Predeterminado blanco)</option>
-                    <option value="boxed">Boxed (Burbujas en tarjetas)</option>
-                    <option value="dark">Burbujas Oscuras (Alto contraste)</option>
-                    <option value="minimal">Minimalista</option>
-                  </select>
+              {/* Style selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Estilo Seleccionado
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {REGISTERED_STYLES.map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setSettings((prev) => ({ ...prev, style: st.id }))}
+                      className={`p-3 rounded-xl border text-left transition flex flex-col justify-between cursor-pointer ${
+                        settings.style === st.id
+                          ? 'border-purple-500 bg-purple-950/40 text-white shadow-md shadow-purple-500/10'
+                          : 'border-slate-800 bg-slate-950 hover:border-slate-700 text-slate-400'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-bold text-sm text-slate-200">{st.name}</div>
+                        <div className="text-[11px] text-slate-500 line-clamp-2 mt-1">
+                          {st.description}
+                        </div>
+                      </div>
+                      <div className="text-[10px] font-mono text-purple-400/80 mt-2">
+                        chat-styles/{st.id}/
+                      </div>
+                    </button>
+                  ))}
                 </div>
+              </div>
 
-                {/* Fade Out */}
+              {/* Advanced options matching KapChat parameters */}
+              <div className="pt-3 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    Desvanecer Mensajes
+                    Desvanecer Mensajes (fade)
                   </label>
                   <select
                     value={settings.fadeSeconds}
                     onChange={(e) =>
-                      setSettings((prev) => ({ ...prev, fadeSeconds: parseInt(e.target.value, 10) }))
+                      setSettings((prev) => ({
+                        ...prev,
+                        fadeSeconds: parseInt(e.target.value, 10),
+                      }))
                     }
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-purple-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-purple-500 text-sm"
                   >
-                    <option value="0">Nunca (Siempre visibles)</option>
-                    <option value="10">Tras 10 segundos</option>
-                    <option value="20">Tras 20 segundos</option>
-                    <option value="30">Tras 30 segundos (Estilo KapChat)</option>
-                    <option value="60">Tras 60 segundos</option>
+                    <option value="0">false (Siempre visibles)</option>
+                    <option value="30">true (30 segundos - KapChat defecto)</option>
+                    <option value="15">15 segundos</option>
+                    <option value="60">60 segundos</option>
                   </select>
                 </div>
-              </div>
 
-              {/* Font size slider */}
-              <div>
-                <div className="flex justify-between items-center mb-1 text-xs text-slate-400">
-                  <span className="font-semibold uppercase tracking-wider">Tamaño de Texto</span>
-                  <span className="text-purple-400 font-bold">{settings.fontSize}px</span>
+                <div className="flex flex-col justify-center space-y-2 pt-2 sm:pt-4">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-white select-none">
+                    <input
+                      type="checkbox"
+                      checked={settings.botActivity}
+                      onChange={(e) =>
+                        setSettings((prev) => ({ ...prev, botActivity: e.target.checked }))
+                      }
+                      className="accent-purple-600 w-4 h-4 rounded"
+                    />
+                    <span>bot_activity (Mostrar bots y comandos !)</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-white select-none">
+                    <input
+                      type="checkbox"
+                      checked={settings.preventClipping}
+                      onChange={(e) =>
+                        setSettings((prev) => ({ ...prev, preventClipping: e.target.checked }))
+                      }
+                      className="accent-purple-600 w-4 h-4 rounded"
+                    />
+                    <span>prevent_clipping (Evitar recorte al borde)</span>
+                  </label>
                 </div>
-                <input
-                  type="range"
-                  min="12"
-                  max="32"
-                  value={settings.fontSize}
-                  onChange={(e) =>
-                    setSettings((prev) => ({ ...prev, fontSize: parseInt(e.target.value, 10) }))
-                  }
-                  className="w-full accent-purple-600 cursor-pointer"
-                />
-              </div>
-
-              {/* Toggles */}
-              <div className="pt-2 border-t border-slate-800/80 flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 hover:text-white select-none">
-                  <input
-                    type="checkbox"
-                    checked={settings.showBadges}
-                    onChange={(e) =>
-                      setSettings((prev) => ({ ...prev, showBadges: e.target.checked }))
-                    }
-                    className="accent-purple-600 w-4 h-4 rounded"
-                  />
-                  <span>Mostrar Insignias (Mod, VIP, Sub, Streamer)</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 hover:text-white select-none">
-                  <input
-                    type="checkbox"
-                    checked={settings.strokeEffect}
-                    onChange={(e) =>
-                      setSettings((prev) => ({ ...prev, strokeEffect: e.target.checked }))
-                    }
-                    className="accent-purple-600 w-4 h-4 rounded"
-                  />
-                  <span>Borde sombreado en texto (Alta legibilidad)</span>
-                </label>
               </div>
             </div>
 
-            {/* OBS Browser Source Generator Card */}
+            {/* OBS Link Generator */}
             <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Settings2 className="w-5 h-5 text-indigo-400" />
-                3. URL para OBS Studio / Streamlabs
+                3. URL de KapChat para OBS Studio / Streamlabs
               </h2>
 
               {settings.channel ? (
@@ -392,67 +405,122 @@ export const App: React.FC = () => {
                   <div className="text-xs text-slate-400 bg-slate-900/90 rounded-xl p-3 border border-slate-800 flex items-start gap-2">
                     <Info className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-semibold text-slate-200">Cómo agregarlo en OBS:</span>
-                      <ol className="list-decimal list-inside mt-1 space-y-0.5 text-slate-400">
-                        <li>En OBS, añade una fuente de tipo <b>Navegador (Browser Source)</b>.</li>
-                        <li>Pega la URL generada arriba en el campo <b>URL</b>.</li>
-                        <li>Configura dimensiones sugeridas: <b>Ancho: 450</b>, <b>Alto: 650</b>.</li>
-                        <li>¡Listo! El fondo es completamente transparente.</li>
-                      </ol>
+                      <span className="font-semibold text-slate-200">
+                        Cómo usar este estilo en OBS:
+                      </span>
+                      <p className="mt-1 text-slate-400">
+                        Añade una fuente de <b>Navegador (Browser Source)</b> con la URL generada.
+                        Tiene el DOM y las clases exactas de KapChat (
+                        <code className="text-slate-300 font-mono">#chat_box</code>,{' '}
+                        <code className="text-slate-300 font-mono">.chat_line</code>,{' '}
+                        <code className="text-slate-300 font-mono">.nick</code>,{' '}
+                        <code className="text-slate-300 font-mono">.message</code>).
+                      </p>
                     </div>
                   </div>
                 </>
               ) : (
                 <div className="p-4 rounded-xl bg-slate-950/60 border border-dashed border-slate-800 text-center text-slate-500 text-sm">
-                  Introduce el nombre de tu canal arriba para generar tu URL de OBS.
+                  Introduce el canal arriba para generar la URL.
                 </div>
               )}
             </div>
           </div>
 
-          {/* Right Column: Live Chat View Preview (5 cols) */}
+          {/* Right Column: Live Style Preview Box (5 cols) */}
           <div className="lg:col-span-5 flex flex-col space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-ping" />
-                Vista Previa en Vivo
+                Vista Previa del Estilo ({settings.style})
               </span>
-              <button
-                type="button"
-                onClick={handleSimulateMessage}
-                className="text-xs bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-purple-200 border border-slate-700 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition cursor-pointer"
-                title="Generar mensaje de prueba"
-              >
-                <Send className="w-3 h-3" />
-                <span>Simular Mensaje</span>
-              </button>
+
+              <div className="flex items-center gap-2">
+                {/* Background switcher for preview */}
+                <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewBg('dark')}
+                    title="Fondo Oscuro (Stream)"
+                    className={`px-2 py-0.5 rounded cursor-pointer ${
+                      previewBg === 'dark' ? 'bg-slate-700 text-white' : 'text-slate-400'
+                    }`}
+                  >
+                    Oscuro
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewBg('white')}
+                    title="Fondo Blanco"
+                    className={`px-2 py-0.5 rounded cursor-pointer ${
+                      previewBg === 'white' ? 'bg-slate-200 text-slate-900' : 'text-slate-400'
+                    }`}
+                  >
+                    Blanco
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewBg('transparent')}
+                    title="Fondo Transparente / Cuadrícula"
+                    className={`px-2 py-0.5 rounded cursor-pointer ${
+                      previewBg === 'transparent' ? 'bg-purple-900 text-purple-200' : 'text-slate-400'
+                    }`}
+                  >
+                    Grid
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSimulateMessage}
+                  className="text-xs bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-purple-200 border border-slate-700 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition cursor-pointer"
+                  title="Generar mensaje de prueba"
+                >
+                  <Send className="w-3 h-3" />
+                  <span>Test</span>
+                </button>
+              </div>
             </div>
 
-            {/* Preview Box Container with clean white background */}
-            <div className="relative rounded-2xl border border-slate-700/60 bg-white shadow-2xl h-[520px] flex flex-col overflow-hidden text-slate-900">
-              {/* Ultra subtle dots */}
-              <div
-                className="absolute inset-0 opacity-[0.03] pointer-events-none"
-                style={{
-                  backgroundImage:
-                    'radial-gradient(circle at 25px 25px, #000 2%, transparent 0%), radial-gradient(circle at 75px 75px, #000 2%, transparent 0%)',
-                  backgroundSize: '100px 100px',
-                }}
-              />
+            {/* Container where the style CSS is dynamically rendered */}
+            <div
+              className={`relative rounded-2xl border border-slate-800 shadow-2xl h-[520px] overflow-hidden flex flex-col transition-colors duration-200 ${
+                previewBg === 'white'
+                  ? 'bg-white'
+                  : previewBg === 'dark'
+                  ? 'bg-slate-950'
+                  : 'bg-slate-900'
+              }`}
+            >
+              {/* Optional grid pattern if transparent */}
+              {previewBg === 'transparent' && (
+                <div
+                  className="absolute inset-0 opacity-15 pointer-events-none"
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%)',
+                    backgroundSize: '20px 20px',
+                    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+                  }}
+                />
+              )}
 
               {settings.channel || mockMessages.length > 0 ? (
-                <ChatOverlay
-                  settings={settings}
-                  isStandalone={false}
-                  onConnectionStatus={setConnectionStatus}
-                  mockMessages={mockMessages}
-                />
+                <div className="relative w-full h-full p-2">
+                  <ChatOverlay
+                    settings={settings}
+                    isStandalone={false}
+                    onConnectionStatus={setConnectionStatus}
+                    mockMessages={mockMessages}
+                  />
+                </div>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400 space-y-2">
-                  <MessageSquare className="w-12 h-12 text-slate-300" />
-                  <p className="text-sm font-semibold text-slate-700">Ingresa un canal o pulsa "Simular Mensaje"</p>
-                  <p className="text-xs text-slate-500 max-w-xs">
-                    Se conectará al instante a los servidores IRC de Twitch y mostrará los mensajes sobre fondo blanco.
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 space-y-2">
+                  <MessageSquare className="w-12 h-12 text-slate-700" />
+                  <p className="text-sm font-medium">Ingresa un canal o pulsa "Test"</p>
+                  <p className="text-xs text-slate-600 max-w-xs">
+                    Renderiza el chat con el estilo activo{' '}
+                    <code className="text-purple-400 font-mono">/chat-styles/{settings.style}/style.css</code>
                   </p>
                 </div>
               )}
@@ -464,16 +532,16 @@ export const App: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} SuliChat. 100% Free & Open-Source (MIT License).</p>
+          <p>© {new Date().getFullYear()} SuliChat. Open-Source NightDev KapChat Replicate.</p>
           <div className="flex items-center gap-4">
-            <span className="text-slate-600">Inspirado en KapChat / NightDev</span>
+            <span className="text-slate-600">DOM 100% compatible con KapChat CSS</span>
             <a
               href="https://github.com/svilla33/SuliChat"
               target="_blank"
               rel="noreferrer"
               className="text-purple-400 hover:text-purple-300"
             >
-              Contribuir en GitHub
+              GitHub Repo
             </a>
           </div>
         </div>

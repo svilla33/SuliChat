@@ -3,17 +3,17 @@ import { TwitchChatClient, type ChatMessage } from '../services/twitchChat';
 import { loadBadgesForChannel } from '../services/twitchBadges';
 import type { ChatSettings } from '../types/settings';
 import { ChatMessageItem } from './ChatMessageItem';
+import { useStyleLoader } from '../hooks/useStyleLoader';
 
 interface ChatOverlayProps {
   settings: ChatSettings;
-  isStandalone?: boolean; // When loaded directly in OBS or iframe
+  isStandalone?: boolean;
   onConnectionStatus?: (status: 'connecting' | 'connected' | 'disconnected' | 'error') => void;
   mockMessages?: ChatMessage[];
 }
 
 export const ChatOverlay: React.FC<ChatOverlayProps> = ({
   settings,
-  isStandalone = false,
   onConnectionStatus,
   mockMessages = [],
 }) => {
@@ -21,12 +21,25 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<TwitchChatClient | null>(null);
 
-  // Combine real chat messages with simulated test messages if provided
-  const allMessages: ChatMessage[] = useMemo(() => {
-    return [...messages, ...mockMessages].sort((a, b) => a.timestamp - b.timestamp);
-  }, [messages, mockMessages]);
+  // Load selected modular style (e.g. 'simple', 'custom1', 'custom2')
+  useStyleLoader(settings.style || 'simple');
 
-  // Auto-scroll to bottom whenever messages update
+  // Filter bot messages if botActivity is false (like in KapChat)
+  const filterMessage = (msg: ChatMessage) => {
+    if (!settings.botActivity) {
+      if (msg.text.startsWith('!')) return false;
+      if (/bot$/i.test(msg.username)) return false;
+    }
+    return true;
+  };
+
+  const allMessages: ChatMessage[] = useMemo(() => {
+    return [...messages, ...mockMessages]
+      .filter(filterMessage)
+      .sort((a, b) => a.timestamp - b.timestamp);
+  }, [messages, mockMessages, settings.botActivity]);
+
+  // Auto-scroll to bottom
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
@@ -34,7 +47,6 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
   }, [allMessages]);
 
   useEffect(() => {
-    // Load badges dynamically for channel and global
     loadBadgesForChannel(settings.channel);
 
     if (!settings.channel) {
@@ -47,7 +59,6 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
     const client = new TwitchChatClient(settings.channel, {
       onMessage: (msg) => {
         setMessages((prev) => {
-          // Keep max 100 messages in memory
           const updated = [...prev, msg];
           return updated.length > 100 ? updated.slice(updated.length - 100) : updated;
         });
@@ -57,10 +68,8 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
       },
       onClearChat: (username) => {
         if (!username) {
-          // Cleared entire chat
           setMessages([]);
         } else {
-          // Purged user
           setMessages((prev) => prev.filter((m) => m.username.toLowerCase() !== username.toLowerCase()));
         }
       },
@@ -78,21 +87,10 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
   }, [settings.channel, onConnectionStatus]);
 
   return (
-    <div
-      ref={containerRef}
-      className={`w-full h-full overflow-y-auto overflow-x-hidden flex flex-col justify-end p-3 ${
-        isStandalone ? 'bg-white text-slate-900' : ''
-      }`}
-      style={{
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none',
-      }}
-    >
-      <div className="flex flex-col space-y-1">
-        {allMessages.map((msg) => (
-          <ChatMessageItem key={msg.id} message={msg} settings={settings} />
-        ))}
-      </div>
+    <div id="chat_box" ref={containerRef}>
+      {allMessages.map((msg) => (
+        <ChatMessageItem key={msg.id} message={msg} settings={settings} />
+      ))}
     </div>
   );
 };

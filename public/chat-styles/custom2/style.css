@@ -1,0 +1,41 @@
+/* ==========================================================================
+   KapChat "Custom 2" Style Template (High Contrast Outline)
+   ========================================================================== */
+
+#chat_box {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.chat_line {
+    margin: 3px 4px;
+    line-height: 1.5;
+    text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000;
+}
+
+.nick {
+    font-weight: 800;
+    margin-right: 2px;
+}
+
+.tag {
+    height: 19px;
+    width: 19px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.colon {
+    margin-right: 4px;
+}
+
+.message {
+    color: #ffffff;
+}
+
+.emoticon {
+    vertical-align: middle;
+    margin: -3px 2px 0 2px;
+}

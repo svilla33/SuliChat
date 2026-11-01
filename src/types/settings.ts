@@ -1,23 +1,17 @@
-export type ChatTheme = 'light' | 'boxed' | 'dark' | 'minimal';
-
 export interface ChatSettings {
   channel: string;
-  theme: ChatTheme;
-  fontSize: number; // in pixels, default 16
-  fadeSeconds: number; // 0 = never fade
+  style: string; // e.g. 'simple', 'custom1', 'custom2'
+  fadeSeconds: number; // 0 = false (disabled), or number of seconds (e.g. 30)
+  botActivity: boolean; // false = ignore commands like !song and bot nicks
+  preventClipping: boolean;
   showBadges: boolean;
-  strokeEffect: boolean; // text stroke for visibility
-  compactMode: boolean;
-  soundAlert: boolean;
 }
 
 export const DEFAULT_SETTINGS: ChatSettings = {
   channel: '',
-  theme: 'light',
-  fontSize: 16,
+  style: 'simple',
   fadeSeconds: 0,
+  botActivity: false,
+  preventClipping: false,
   showBadges: true,
-  strokeEffect: false,
-  compactMode: false,
-  soundAlert: false,
 };

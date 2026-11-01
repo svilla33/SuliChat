@@ -8,7 +8,6 @@ interface BadgesProps {
 }
 
 export const Badges: React.FC<BadgesProps> = ({ badges, channel }) => {
-  // Trigger re-render whenever dynamic badges are loaded
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -18,7 +17,7 @@ export const Badges: React.FC<BadgesProps> = ({ badges, channel }) => {
   if (!badges || badges.length === 0) return null;
 
   return (
-    <span className="inline-flex items-center gap-1 align-middle mr-1.5 flex-shrink-0 select-none">
+    <span className="badges">
       {badges.map((badge, idx) => {
         const badgeInfo = getBadge(badge.type, badge.version, channel);
 
@@ -26,10 +25,10 @@ export const Badges: React.FC<BadgesProps> = ({ badges, channel }) => {
           return (
             <img
               key={`${badge.type}-${badge.version}-${idx}`}
+              className={`tag ${badge.type}-${badge.version}`}
               src={badgeInfo.url}
               alt={badgeInfo.title}
-              title={`${badgeInfo.title}`}
-              className="w-[18px] h-[18px] inline-block object-contain align-middle rounded-sm drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]"
+              title={badgeInfo.title}
               loading="lazy"
             />
           );
