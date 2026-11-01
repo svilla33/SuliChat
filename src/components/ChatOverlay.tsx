@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { TwitchChatClient, type ChatMessage } from '../services/twitchChat';
+import { loadBadgesForChannel } from '../services/twitchBadges';
 import type { ChatSettings } from '../types/settings';
 import { ChatMessageItem } from './ChatMessageItem';
 
@@ -33,6 +34,9 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
   }, [allMessages]);
 
   useEffect(() => {
+    // Load badges dynamically for channel and global
+    loadBadgesForChannel(settings.channel);
+
     if (!settings.channel) {
       setMessages([]);
       return;

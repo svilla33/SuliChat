@@ -15,6 +15,7 @@ import {
 import { ChatOverlay } from './components/ChatOverlay';
 import { DEFAULT_SETTINGS, type ChatSettings, type ChatTheme } from './types/settings';
 import type { ChatMessage } from './services/twitchChat';
+import { loadBadgesForChannel } from './services/twitchBadges';
 
 export const App: React.FC = () => {
   // Query param parsing for OBS browser source mode
@@ -47,33 +48,37 @@ export const App: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
   const [mockMessages, setMockMessages] = useState<ChatMessage[]>([]);
 
+  useEffect(() => {
+    loadBadgesForChannel(settings.channel);
+  }, [settings.channel]);
+
   const sampleMessages: Array<{ user: string; text: string; color: string; badges: Array<{ type: string; version: string }>; emotes: Array<{ id: string; start: number; end: number; name: string }> }> = [
     {
       user: 'SuliDev',
       text: '¡Hola a todos! Bienvenidos al stream PogChamp',
       color: '#A855F7',
-      badges: [{ type: 'broadcaster', version: '1' }],
+      badges: [{ type: 'broadcaster', version: '1' }, { type: 'partner', version: '1' }],
       emotes: [{ id: '88', start: 39, end: 46, name: 'PogChamp' }],
     },
     {
       user: 'ModMaster',
       text: 'Recordad seguir las reglas del chat Kappa',
       color: '#10B981',
-      badges: [{ type: 'moderator', version: '1' }],
+      badges: [{ type: 'moderator', version: '1' }, { type: 'glhf-pledge', version: '1' }],
       emotes: [{ id: '25', start: 36, end: 40, name: 'Kappa' }],
     },
     {
       user: 'SuperVIP',
       text: '¿A qué juego le damos hoy? LUL',
       color: '#EC4899',
-      badges: [{ type: 'vip', version: '1' }],
+      badges: [{ type: 'vip', version: '1' }, { type: 'sub-gift-leader', version: '1' }],
       emotes: [{ id: '425618', start: 27, end: 29, name: 'LUL' }],
     },
     {
       user: 'ViewerFiel',
       text: '¡El mejor setup de overlay que he visto! VoHiYo',
       color: '#3B82F6',
-      badges: [{ type: 'subscriber', version: '1' }],
+      badges: [{ type: 'subscriber', version: '1' }, { type: 'premium', version: '1' }, { type: 'twitch-recap-2024', version: '1' }],
       emotes: [{ id: '81274', start: 43, end: 48, name: 'VoHiYo' }],
     },
   ];

@@ -68,7 +68,12 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, setti
       className={`transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 leading-relaxed break-words font-medium ${containerStyle}`}
       style={{ fontSize: `${settings.fontSize}px` }}
     >
-      {showBadges && <Badges badges={message.badges} />}
+      {showBadges && (
+        <Badges
+          badges={message.badges}
+          channel={message.channel || settings.channel}
+        />
+      )}
 
       <span
         className={`font-bold mr-1.5 select-none ${strokeClass}`}
