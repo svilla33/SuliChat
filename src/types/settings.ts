@@ -1,4 +1,4 @@
-export type ChatTheme = 'dark' | 'light' | 'minimal' | 'boxed';
+export type ChatTheme = 'light' | 'boxed' | 'dark' | 'minimal';
 
 export interface ChatSettings {
   channel: string;
@@ -6,18 +6,18 @@ export interface ChatSettings {
   fontSize: number; // in pixels, default 16
   fadeSeconds: number; // 0 = never fade
   showBadges: boolean;
-  strokeEffect: boolean; // text stroke for visibility on bright streams
+  strokeEffect: boolean; // text stroke for visibility
   compactMode: boolean;
   soundAlert: boolean;
 }
 
 export const DEFAULT_SETTINGS: ChatSettings = {
   channel: '',
-  theme: 'dark',
+  theme: 'light',
   fontSize: 16,
   fadeSeconds: 0,
   showBadges: true,
-  strokeEffect: true,
+  strokeEffect: false,
   compactMode: false,
   soundAlert: false,
 };

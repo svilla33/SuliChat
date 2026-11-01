@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   MessageSquare,
   Copy,
@@ -124,10 +124,18 @@ export const App: React.FC = () => {
     setSettings((prev) => ({ ...prev, channel: clean }));
   };
 
-  // If in overlay mode (for OBS Browser Source), render strictly the chat widget without any app chrome
+  // Ensure white background on overlay mode
+  useEffect(() => {
+    if (isOverlayMode) {
+      document.body.style.backgroundColor = '#ffffff';
+      document.body.style.color = '#0f172a';
+    }
+  }, [isOverlayMode]);
+
+  // If in overlay mode (for OBS Browser Source), render strictly the chat widget on white background
   if (isOverlayMode) {
     return (
-      <main className="w-screen h-screen bg-transparent overflow-hidden">
+      <main className="w-screen h-screen bg-white text-slate-900 overflow-hidden">
         <ChatOverlay settings={settings} isStandalone={true} />
       </main>
     );
@@ -264,9 +272,9 @@ export const App: React.FC = () => {
                     }
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-purple-500"
                   >
-                    <option value="dark">Oscuro / Transparente (Clásico)</option>
-                    <option value="boxed">Boxed / Burbujas oscuras</option>
-                    <option value="light">Claro</option>
+                    <option value="light">Claro (Predeterminado blanco)</option>
+                    <option value="boxed">Boxed (Burbujas en tarjetas)</option>
+                    <option value="dark">Burbujas Oscuras (Alto contraste)</option>
                     <option value="minimal">Minimalista</option>
                   </select>
                 </div>
@@ -415,14 +423,14 @@ export const App: React.FC = () => {
               </button>
             </div>
 
-            {/* Preview Box Container with simulated stream backdrop */}
-            <div className="relative rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl h-[520px] flex flex-col overflow-hidden">
-              {/* Optional simulated gaming background checkerboard/gradient */}
+            {/* Preview Box Container with clean white background */}
+            <div className="relative rounded-2xl border border-slate-700/60 bg-white shadow-2xl h-[520px] flex flex-col overflow-hidden text-slate-900">
+              {/* Ultra subtle dots */}
               <div
-                className="absolute inset-0 opacity-20 pointer-events-none"
+                className="absolute inset-0 opacity-[0.03] pointer-events-none"
                 style={{
                   backgroundImage:
-                    'radial-gradient(circle at 25px 25px, rgba(255, 255, 255, 0.15) 2%, transparent 0%), radial-gradient(circle at 75px 75px, rgba(255, 255, 255, 0.15) 2%, transparent 0%)',
+                    'radial-gradient(circle at 25px 25px, #000 2%, transparent 0%), radial-gradient(circle at 75px 75px, #000 2%, transparent 0%)',
                   backgroundSize: '100px 100px',
                 }}
               />
@@ -435,11 +443,11 @@ export const App: React.FC = () => {
                   mockMessages={mockMessages}
                 />
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 space-y-2">
-                  <MessageSquare className="w-12 h-12 text-slate-700" />
-                  <p className="text-sm font-medium">Ingresa un canal o pulsa "Simular Mensaje"</p>
-                  <p className="text-xs text-slate-600 max-w-xs">
-                    Se conectará al instante a los servidores IRC de Twitch y mostrará los mensajes, emotes e insignias.
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400 space-y-2">
+                  <MessageSquare className="w-12 h-12 text-slate-300" />
+                  <p className="text-sm font-semibold text-slate-700">Ingresa un canal o pulsa "Simular Mensaje"</p>
+                  <p className="text-xs text-slate-500 max-w-xs">
+                    Se conectará al instante a los servidores IRC de Twitch y mostrará los mensajes sobre fondo blanco.
                   </p>
                 </div>
               )}

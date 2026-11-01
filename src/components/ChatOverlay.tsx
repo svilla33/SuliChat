@@ -77,7 +77,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
     <div
       ref={containerRef}
       className={`w-full h-full overflow-y-auto overflow-x-hidden flex flex-col justify-end p-3 ${
-        isStandalone ? 'bg-transparent' : ''
+        isStandalone ? 'bg-white text-slate-900' : ''
       }`}
       style={{
         scrollbarWidth: 'none',
