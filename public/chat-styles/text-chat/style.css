@@ -1,0 +1,134 @@
+/* ==========================================================================
+   SuliChat "Chat de Texto" (Text Chat / SMS Bubbles) Style
+   Inspired by modern messaging apps: colorful user pill tags overlapping
+   soft warm cream message bubbles.
+   ========================================================================== */
+
+#chat_box {
+    background-color: transparent;
+    font-family: var(--chat-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif);
+    font-size: var(--chat-font-size, 26px);
+    color: var(--chat-font-color, #ffffff);
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    padding: 10px 10px;
+    gap: 2px;
+}
+
+.chat_line {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 6px 0;
+    position: relative;
+    max-width: 100%;
+    width: fit-content;
+}
+
+/* User Pill (Top-left overlapping tag) */
+.meta {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--user-color, #9146FF) !important;
+    color: #ffffff !important;
+    border-radius: 9999px;
+    padding: 3px 12px 3px 8px;
+    margin-left: 14px;
+    margin-bottom: -11px;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+    width: fit-content;
+    max-width: 90%;
+    transform: translateZ(0);
+}
+
+.meta .nick,
+.meta .name {
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 0.88em;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 0 1px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+    margin-left: 4px;
+}
+
+.badges {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-right: 2px;
+    gap: 3px;
+}
+
+.tag {
+    height: 1.1em;
+    width: 1.1em;
+    border-radius: 2px;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+.platform-icon {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-right: 4px;
+    filter: brightness(0) invert(1) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+
+/* Hide colon and timestamps for clean messaging look */
+.colon {
+    display: none !important;
+}
+
+.time_stamp {
+    display: none;
+}
+
+/* Message Bubble (Soft warm cream card) */
+.message {
+    display: inline-block;
+    background-color: #F3EFE3;
+    color: #3C362A !important;
+    border-radius: 20px;
+    padding: 12px 12px 12px 12px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(215, 206, 191, 0.6);
+    line-height: 1.42;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    position: relative;
+    z-index: 1;
+    width: fit-content;
+    min-width: 76px;
+    max-width: 92%;
+    font-weight: 500;
+}
+
+/* Emotes */
+.emoticon {
+    display: inline-block;
+    vertical-align: -0.22em;
+    height: 1.35em;
+    width: auto;
+    margin: 0 0.15em;
+    object-fit: contain;
+}
+
+.emoticon-zero-width {
+    margin-left: -1.5em !important;
+    pointer-events: none;
+    position: relative;
+    z-index: 2;
+}

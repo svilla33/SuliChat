@@ -1,23 +1,32 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  MessageSquare,
   Copy,
   ExternalLink,
   Check,
-  Settings2,
-  Tv,
+  Eye,
+  EyeOff,
+  Play,
+  RefreshCw,
+  Sliders,
+  Type,
+  ShieldAlert,
+  Bell,
   Sparkles,
-  Palette,
-  Info,
-  Radio,
-  Send,
-  FolderOpen
+  Layers,
+  ChevronDown,
 } from 'lucide-react';
 import { ChatOverlay } from './components/ChatOverlay';
-import { DEFAULT_SETTINGS, type ChatSettings } from './types/settings';
+import {
+  type ChatSettings,
+  searchParamsToSettings,
+  settingsToSearchParams,
+  saveSettingsToStorage,
+} from './types/settings';
 import type { ChatMessage } from './services/twitchChat';
 import { loadBadgesForChannel } from './services/twitchBadges';
-import { REGISTERED_STYLES } from './styles/registry';
+import { loadExternalEmotesForChannel } from './services/externalEmotes';
+import { useAvailableStyles } from './styles/registry';
+import { AVAILABLE_SOUNDS, playNotificationSound } from './utils/audioNotification';
 
 export const App: React.FC = () => {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -26,117 +35,154 @@ export const App: React.FC = () => {
     searchParams.get('standalone') === 'true' ||
     window.location.pathname.includes('/obschat');
 
-  // Initialize settings from URL params matching KapChat query format
+  // Load initial settings
   const [settings, setSettings] = useState<ChatSettings>(() => {
-    const channelParam = searchParams.get('channel') || '';
-    const styleParam = searchParams.get('style') || DEFAULT_SETTINGS.style;
-
-    // Fade can be 'false', 'true', or a number like '30'
-    const fadeParam = searchParams.get('fade');
-    let fadeSec = DEFAULT_SETTINGS.fadeSeconds;
-    if (fadeParam === 'true') fadeSec = 30;
-    else if (fadeParam && fadeParam !== 'false') {
-      const parsed = parseInt(fadeParam, 10);
-      if (!isNaN(parsed)) fadeSec = parsed;
-    }
-
-    const botActivityParam = searchParams.get('bot_activity') === 'true';
-    const preventClippingParam = searchParams.get('prevent_clipping') === 'true';
-    const badgesParam = searchParams.get('badges') !== 'false';
-
-    return {
-      channel: channelParam,
-      style: styleParam,
-      fadeSeconds: fadeSec,
-      botActivity: botActivityParam,
-      preventClipping: preventClippingParam,
-      showBadges: badgesParam,
-    };
+    return searchParamsToSettings(searchParams);
   });
 
-  const [inputChannel, setInputChannel] = useState(settings.channel);
+  const availableStyles = useAvailableStyles();
+
+  const [channelInput, setChannelInput] = useState(settings.channel);
   const [copied, setCopied] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<
+  const [isUrlVisible, setIsUrlVisible] = useState(false);
+  const [newBadWord, setNewBadWord] = useState('');
+  const [previewBg, setPreviewBg] = useState(settings.previewBg || '#444f6f');
+  const [, setConnectionStatus] = useState<
     'connecting' | 'connected' | 'disconnected' | 'error'
   >('disconnected');
-  const [previewBg, setPreviewBg] = useState<'dark' | 'transparent' | 'white'>('dark');
+
+  // Accordion state
+  const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>({
+    style: true,
+    font: true,
+    badges: false,
+    emotes: false,
+    messages: false,
+    notifications: false,
+  });
+
   const [mockMessages, setMockMessages] = useState<ChatMessage[]>([]);
 
+  // Update channel badges & external emotes
   useEffect(() => {
-    loadBadgesForChannel(settings.channel);
+    if (settings.channel) {
+      loadBadgesForChannel(settings.channel);
+      loadExternalEmotesForChannel(settings.channel);
+    }
   }, [settings.channel]);
 
-  const sampleMessages: Array<{
-    user: string;
-    text: string;
-    color: string;
-    badges: Array<{ type: string; version: string }>;
-    emotes: Array<{ id: string; start: number; end: number; name: string }>;
-  }> = [
+  // Set overlay class on body for OBS transparency
+  useEffect(() => {
+    if (isOverlayMode) {
+      document.body.classList.add('overlay-mode');
+    } else {
+      document.body.classList.remove('overlay-mode');
+    }
+    return () => {
+      document.body.classList.remove('overlay-mode');
+    };
+  }, [isOverlayMode]);
+
+  // Sample messages for live preview
+  const sampleUsers = [
     {
-      user: 'Carola',
-      text: '¡Bienvenidos todos al stream! PogChamp',
-      color: '#FF0000',
+      user: 'SuliShade',
+      color: '#3399cc',
       badges: [{ type: 'broadcaster', version: '1' }, { type: 'partner', version: '1' }],
-      emotes: [{ id: '88', start: 36, end: 43, name: 'PogChamp' }],
+      text: 'I love this chatbox! Welcome to the chat! PogChamp KEKW catJAM',
+      emotes: [],
     },
     {
       user: 'ModMaster',
-      text: 'Recuerden respetar las normas de la comunidad Kappa',
       color: '#10B981',
       badges: [{ type: 'moderator', version: '1' }],
-      emotes: [{ id: '25', start: 47, end: 51, name: 'Kappa' }],
+      text: 'Remember to support Suli! peepoHappy PETPET AYAYA',
+      emotes: [],
     },
     {
-      user: 'SuperVIP',
-      text: 'Probando el nuevo estilo de chat LUL',
-      color: '#A855F7',
+      user: 'GamerGiga',
+      color: '#5cd0ff',
+      badges: [{ type: 'subscriber', version: '12' }],
+      text: 'Suli joined the game GIGACHAD EZ Clap',
+      emotes: [],
+    },
+    {
+      user: 'SuperFan99',
+      color: '#EC4899',
       badges: [{ type: 'vip', version: '1' }],
-      emotes: [{ id: '425618', start: 33, end: 35, name: 'LUL' }],
+      text: 'I love your stream! PepePls widepeepoHappy',
+      emotes: [],
     },
     {
-      user: 'ViewerFiel',
-      text: '¡El estilo KapChat idéntico a NightDev! VoHiYo',
-      color: '#3B82F6',
-      badges: [{ type: 'subscriber', version: '1' }, { type: 'premium', version: '1' }],
-      emotes: [{ id: '81274', start: 41, end: 46, name: 'VoHiYo' }],
+      user: 'CuriousPlayer',
+      color: '#F59E0B',
+      badges: [{ type: 'turbo', version: '1' }],
+      text: 'Can I play with you??? monkaW HUH',
+      emotes: [],
+    },
+    {
+      user: 'TopDonator',
+      color: '#9146FF',
+      badges: [{ type: 'bits', version: '1000' }, { type: 'subscriber', version: '24' }],
+      text: 'cheer100 Thank you for this great stream! POGGERS PepeLaugh',
+      emotes: [],
+    },
+    {
+      user: 'NoobChatter',
+      color: '#06b6d4',
+      badges: [{ type: 'prime', version: '1' }],
+      text: 'How do you play Just Chatting? xdd NOWAY WAYTOODANK',
+      emotes: [],
+    },
+    {
+      user: 'FriendlyBot',
+      color: '#a78bfa',
+      badges: [{ type: 'artist', version: '1' }],
+      text: 'Hello, I am a chat message! AlienDance monkaS pepeJAM',
+      emotes: [],
     },
   ];
 
-  const handleSimulateMessage = () => {
-    const sample = sampleMessages[Math.floor(Math.random() * sampleMessages.length)];
-    const newMsg: ChatMessage = {
-      id: `mock-${Date.now()}-${Math.random()}`,
-      channel: settings.channel || 'demo',
-      username: sample.user.toLowerCase(),
-      displayName: sample.user,
-      color: sample.color,
-      badges: sample.badges,
-      emotes: sample.emotes,
-      text: sample.text,
-      isAction: false,
-      timestamp: Date.now(),
+  // Automatically stream sample messages in loop until a Twitch channel is configured
+  useEffect(() => {
+    if (settings.channel && settings.channel.trim() !== '') {
+      setMockMessages([]);
+      return;
+    }
+
+    let currentIndex = 0;
+    const sendNextSample = () => {
+      const sample = sampleUsers[currentIndex % sampleUsers.length];
+      currentIndex++;
+      const newMsg: ChatMessage = {
+        id: `mock-${Date.now()}-${Math.random()}`,
+        channel: 'demo',
+        username: sample.user.toLowerCase(),
+        displayName: sample.user,
+        color: sample.color,
+        badges: sample.badges,
+        emotes: sample.emotes,
+        text: sample.text,
+        isAction: false,
+        timestamp: Date.now(),
+      };
+      setMockMessages((prev) => [...prev.slice(-20), newMsg]);
     };
-    setMockMessages((prev) => [...prev.slice(-30), newMsg]);
-  };
 
-  // Generate exact KapChat style URL for OBS
+    sendNextSample();
+    const interval = setInterval(sendNextSample, 3400);
+
+    return () => clearInterval(interval);
+  }, [settings.channel]);
+
+  // Generate URL for OBS Browser Source
   const generatedUrl = useMemo(() => {
-    if (!settings.channel) return '';
     const baseUrl = `${window.location.origin}${window.location.pathname}`;
-    const params = new URLSearchParams();
-    params.set('channel', settings.channel);
-    params.set('style', settings.style || 'simple');
-    params.set('fade', settings.fadeSeconds > 0 ? settings.fadeSeconds.toString() : 'false');
-    params.set('bot_activity', settings.botActivity ? 'true' : 'false');
-    params.set('prevent_clipping', settings.preventClipping ? 'true' : 'false');
-    params.set('overlay', 'true');
-
+    const params = settingsToSearchParams(settings);
     return `${baseUrl}?${params.toString()}`;
   }, [settings]);
 
   const copyToClipboard = () => {
-    if (!generatedUrl) return;
     navigator.clipboard.writeText(generatedUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -144,369 +190,826 @@ export const App: React.FC = () => {
 
   const handleApplyChannel = (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = inputChannel.trim().toLowerCase().replace(/^#/, '');
+    const clean = channelInput.trim().toLowerCase().replace(/^#/, '');
     setSettings((prev) => ({ ...prev, channel: clean }));
   };
 
-  // OBS Overlay Mode: render strictly the chat box with modular style loaded
+  // Auto-save settings to local storage whenever changed
+  useEffect(() => {
+    saveSettingsToStorage({ ...settings, previewBg });
+  }, [settings, previewBg]);
+
+  const toggleAccordion = (key: string) => {
+    setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleAddBadWord = (e: React.FormEvent) => {
+    e.preventDefault();
+    const word = newBadWord.trim().toLowerCase();
+    if (word && !settings.customBadWords.includes(word)) {
+      setSettings((prev) => ({
+        ...prev,
+        customBadWords: [...prev.customBadWords, word],
+      }));
+      setNewBadWord('');
+    }
+  };
+
+  const handleRemoveBadWord = (wordToRemove: string) => {
+    setSettings((prev) => ({
+      ...prev,
+      customBadWords: prev.customBadWords.filter((w) => w !== wordToRemove),
+    }));
+  };
+
+  // Standalone Overlay Mode for OBS
   if (isOverlayMode) {
     return (
-      <main className="w-screen h-screen bg-transparent overflow-hidden m-0 p-0">
+      <main className="w-screen h-screen bg-transparent overflow-hidden m-0 p-0 select-none">
         <ChatOverlay settings={settings} isStandalone={true} />
       </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-purple-600 selection:text-white">
-      {/* Header */}
-      <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-              <MessageSquare className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-purple-400 via-pink-300 to-indigo-300 bg-clip-text text-transparent">
-                SuliChat
-              </span>
-              <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-900/50 text-purple-300 border border-purple-700/50">
-                NightDev KapChat Modular
-              </span>
-            </div>
+    <div className="min-h-screen text-[#dce4ed] flex flex-col font-sans selection:bg-[#3399cc]/30 selection:text-white">
+      {/* Top Navbar */}
+      <nav className="border-b border-[#242c3a] bg-[#141720] sticky top-0 z-40">
+        <div className="max-w-[1240px] mx-auto px-4 h-11 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img src="/img/suli_sit.gif" alt="Suli" className="w-6 h-6 object-contain" />
+            <span className="font-bold text-base text-white font-['Verdana',sans-serif]">
+              SuliChat
+            </span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-slate-400 hidden sm:inline-block">
-              Open Source Streamer Tools Suite
-            </span>
+          <div className="flex items-center gap-2 text-xs">
             <a
-              href="https://github.com/svilla33/SuliChat"
+              href="https://ko-fi.com/G6T529WGWF"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 text-sm text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors"
+              className="inline-flex items-center hover:opacity-90 transition-opacity"
             >
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-              </svg>
-              <span>GitHub</span>
+              <img
+                src="https://storage.ko-fi.com/cdn/kofi6.png?v=6"
+                alt="Buy Me a Coffee at ko-fi.com"
+                style={{ border: '0px', height: '28px' }}
+                className="h-[28px] object-contain"
+              />
             </a>
           </div>
         </div>
-      </header>
+      </nav>
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
-        {/* Banner */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border border-purple-900/40 bg-gradient-to-r from-purple-950/40 via-slate-900 to-indigo-950/30 rounded-2xl p-6 shadow-xl">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-purple-400" />
-              NightDev KapChat Replicate & Style Studio
-            </h1>
-            <p className="text-slate-400 text-sm sm:text-base max-w-2xl">
-              Copia libre de KapChat con arquitectura modular para estilos. Crea carpetas en{' '}
-              <code className="text-purple-300 font-mono text-xs bg-slate-950 px-1.5 py-0.5 rounded border border-purple-900/50">
-                public/chat-styles/
-              </code>{' '}
-              con tu propio HTML, CSS y JS.
-            </p>
+      {/* Main Workspace */}
+      <main className="max-w-[1240px] w-full mx-auto px-4 py-3 flex-1 space-y-2.5">
+        {/* Quick Setup: Channel & Widget URL */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
+          {/* Channel */}
+          <div className="md:col-span-5 bg-[#1b202a] border border-[#252e3c] rounded-[5px] p-2.5 flex flex-col justify-between">
+            <form onSubmit={handleApplyChannel} className="flex gap-1.5">
+              <div className="relative flex-1">
+                <span className="absolute left-2.5 top-1.5 text-[#3399cc] font-bold text-xs">#</span>
+                <input
+                  type="text"
+                  value={channelInput}
+                  onChange={(e) => setChannelInput(e.target.value)}
+                  placeholder="channel_name"
+                  className="w-full bg-[#13171f] border border-[#283240] focus:border-[#5cd0ff] rounded-[4px] text-white pl-6 pr-2 py-1 text-xs font-mono outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-[#242b36] hover:bg-[#2d3746] text-[#5cd0ff] border border-[#3399cc]/40 font-semibold px-2.5 py-1 rounded-[4px] text-xs transition cursor-pointer flex items-center gap-1"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Connect</span>
+              </button>
+            </form>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700/60 text-xs">
-              <Radio
-                className={`w-3.5 h-3.5 ${
-                  connectionStatus === 'connected'
-                    ? 'text-emerald-400 animate-pulse'
-                    : connectionStatus === 'connecting'
-                    ? 'text-amber-400 animate-spin'
-                    : 'text-slate-500'
-                }`}
-              />
-              <span className="capitalize text-slate-300">
-                {connectionStatus === 'connected'
-                  ? `Conectado a #${settings.channel}`
-                  : connectionStatus === 'connecting'
-                  ? 'Conectando...'
-                  : settings.channel
-                  ? 'Desconectado'
-                  : 'Esperando canal'}
-              </span>
+          {/* Widget URL */}
+          <div className="md:col-span-7 bg-[#1b202a] border border-[#252e3c] rounded-[5px] p-2.5 flex flex-col justify-between">
+
+            <div className="flex gap-1.5">
+              <div className="relative flex-1 bg-[#13171f] border border-[#283240] rounded-[4px] flex items-center overflow-hidden">
+                <input
+                  type={isUrlVisible ? 'text' : 'password'}
+                  readOnly
+                  value={generatedUrl}
+                  className={`w-full bg-transparent px-2.5 py-1 text-xs text-[#5cd0ff] font-mono outline-none select-all ${
+                    !isUrlVisible ? 'filter blur-[3.5px] select-none pointer-events-none' : ''
+                  }`}
+                />
+
+                {!isUrlVisible && (
+                  <button
+                    type="button"
+                    onClick={copyToClipboard}
+                    className="absolute inset-0 bg-[#13171f]/95 hover:bg-[#13171f] text-[#dce4ed] font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    {copied ? (
+                      <span className="text-[#5cd0ff] font-bold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Copied!
+                      </span>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3 text-[#3399cc]" />
+                        <span>Click to Copy URL</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsUrlVisible(!isUrlVisible)}
+                  className="z-10 px-2 py-1 text-[#8c9cb4] hover:text-white border-l border-[#283240] bg-[#161a22]"
+                  title={isUrlVisible ? 'Hide URL' : 'Show URL'}
+                >
+                  {isUrlVisible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={copyToClipboard}
+                className="bg-[#5cd0ff] hover:bg-[#78deff] text-[#0f1722] font-semibold text-xs px-3 py-1 rounded-[4px] transition cursor-pointer flex items-center gap-1"
+              >
+                <Copy className="w-3 h-3" />
+                <span>{copied ? 'Copied!' : 'Copy'}</span>
+              </button>
+
+              <a
+                href={generatedUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="bg-[#242b36] hover:bg-[#2d3746] text-[#dce4ed] border border-[#283240] px-2 py-1 rounded-[4px] flex items-center justify-center transition"
+                title="Open in new window"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
           </div>
         </div>
 
-        {/* 2-Columns: Generator on left, Live Style Preview on right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Channel Input Card */}
-            <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Tv className="w-5 h-5 text-purple-400" />
-                1. Canal de Twitch
-              </h2>
-              <form onSubmit={handleApplyChannel} className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-bold">
-                    #
+        {/* 2-Column Settings & Live Preview */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-start">
+          {/* Settings Cards (7 cols) */}
+          <div className="lg:col-span-7 space-y-2">
+            {/* Theme */}
+            <div className="bg-[#1b202a] border border-[#252e3c] rounded-[5px] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleAccordion('style')}
+                className="w-full py-1.5 px-3 flex items-center justify-between text-left cursor-pointer hover:bg-[#222936] transition"
+              >
+                <div className="flex items-center gap-2">
+                  <Layers className="w-3.5 h-3.5 text-[#5cd0ff]" />
+                  <span className="font-bold text-xs text-white">Theme</span>
+                </div>
+              </button>
+
+              {openAccordions.style && (
+                <div className="p-2.5 pt-0 border-t border-[#252e3c]">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 pt-1.5">
+                    {availableStyles.map((st) => {
+                      const isSelected = settings.style === st.id;
+                      return (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setSettings((prev) => ({ ...prev, style: st.id }))}
+                          className={`px-2 py-1.5 rounded-[4px] border text-left transition cursor-pointer flex items-center justify-between ${
+                            isSelected
+                              ? 'bg-[#5cd0ff] border-[#5cd0ff] text-[#0f1722] font-bold'
+                              : 'bg-[#161a22] border-[#283240] hover:bg-[#222936] text-[#dce4ed] font-medium'
+                          }`}
+                        >
+                          <span className="text-xs truncate">{st.name}</span>
+                          {isSelected && <Check className="w-3 h-3 text-[#0f1722] shrink-0 ml-1" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Typography */}
+            <div className="bg-[#1b202a] border border-[#252e3c] rounded-[5px] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleAccordion('font')}
+                className="w-full py-1.5 px-3 flex items-center justify-between text-left cursor-pointer hover:bg-[#222936] transition"
+              >
+                <div className="flex items-center gap-2">
+                  <Type className="w-3.5 h-3.5 text-[#5cd0ff]" />
+                  <span className="font-bold text-xs text-white">Typography</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono text-[#5cd0ff]">
+                    {settings.font.family} • {settings.font.size}px
                   </span>
-                  <input
-                    type="text"
-                    value={inputChannel}
-                    onChange={(e) => setInputChannel(e.target.value)}
-                    placeholder="Ejemplo: carola, ibai, shroud..."
-                    className="w-full bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl pl-8 pr-4 py-2.5 text-white placeholder-slate-500 outline-none transition"
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-[#8c9cb4] transition-transform ${
+                      openAccordions.font ? 'rotate-180' : ''
+                    }`}
                   />
                 </div>
-                <button
-                  type="submit"
-                  className="bg-purple-600 hover:bg-purple-500 text-white font-semibold px-5 py-2.5 rounded-xl transition shadow-lg shadow-purple-600/30 flex items-center gap-2 cursor-pointer"
-                >
-                  Conectar
-                </button>
-              </form>
-            </div>
+              </button>
 
-            {/* Chat Styles Modular Card */}
-            <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Palette className="w-5 h-5 text-purple-400" />
-                  2. Estilos Modulares (Chat Styles)
-                </h2>
-                <span className="text-xs text-purple-400 font-mono flex items-center gap-1">
-                  <FolderOpen className="w-3.5 h-3.5" />
-                  public/chat-styles/
-                </span>
-              </div>
-
-              {/* Style selector */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                  Estilo Seleccionado
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {REGISTERED_STYLES.map((st) => (
-                    <button
-                      key={st.id}
-                      type="button"
-                      onClick={() => setSettings((prev) => ({ ...prev, style: st.id }))}
-                      className={`p-3 rounded-xl border text-left transition flex flex-col justify-between cursor-pointer ${
-                        settings.style === st.id
-                          ? 'border-purple-500 bg-purple-950/40 text-white shadow-md shadow-purple-500/10'
-                          : 'border-slate-800 bg-slate-950 hover:border-slate-700 text-slate-400'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold text-sm text-slate-200">{st.name}</div>
-                        <div className="text-[11px] text-slate-500 line-clamp-2 mt-1">
-                          {st.description}
-                        </div>
-                      </div>
-                      <div className="text-[10px] font-mono text-purple-400/80 mt-2">
-                        chat-styles/{st.id}/
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Advanced options matching KapChat parameters */}
-              <div className="pt-3 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    Desvanecer Mensajes (fade)
-                  </label>
-                  <select
-                    value={settings.fadeSeconds}
-                    onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        fadeSeconds: parseInt(e.target.value, 10),
-                      }))
-                    }
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none focus:border-purple-500 text-sm"
-                  >
-                    <option value="0">false (Siempre visibles)</option>
-                    <option value="30">true (30 segundos - KapChat defecto)</option>
-                    <option value="15">15 segundos</option>
-                    <option value="60">60 segundos</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col justify-center space-y-2 pt-2 sm:pt-4">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-white select-none">
-                    <input
-                      type="checkbox"
-                      checked={settings.botActivity}
+              {openAccordions.font && (
+                <div className="p-2.5 pt-0 border-t border-[#252e3c] space-y-2.5">
+                  {/* Font Family */}
+                  <div className="pt-1.5 space-y-1">
+                    <label className="text-[11px] font-bold text-[#8c9cb4] block">Font Family</label>
+                    <select
+                      value={settings.font.family}
                       onChange={(e) =>
-                        setSettings((prev) => ({ ...prev, botActivity: e.target.checked }))
+                        setSettings((prev) => ({
+                          ...prev,
+                          font: { ...prev.font, family: e.target.value },
+                        }))
                       }
-                      className="accent-purple-600 w-4 h-4 rounded"
-                    />
-                    <span>bot_activity (Mostrar bots y comandos !)</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-white select-none">
-                    <input
-                      type="checkbox"
-                      checked={settings.preventClipping}
-                      onChange={(e) =>
-                        setSettings((prev) => ({ ...prev, preventClipping: e.target.checked }))
-                      }
-                      className="accent-purple-600 w-4 h-4 rounded"
-                    />
-                    <span>prevent_clipping (Evitar recorte al borde)</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* OBS Link Generator */}
-            <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Settings2 className="w-5 h-5 text-indigo-400" />
-                3. URL de KapChat para OBS Studio / Streamlabs
-              </h2>
-
-              {settings.channel ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={generatedUrl}
-                      className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-purple-300 font-mono outline-none select-all"
-                    />
-                    <button
-                      onClick={copyToClipboard}
-                      className={`px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition cursor-pointer ${
-                        copied
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30'
-                      }`}
+                      className="w-full bg-[#13171f] border border-[#283240] focus:border-[#5cd0ff] rounded-[4px] text-white text-xs px-2 py-1 outline-none cursor-pointer"
                     >
-                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      <span>{copied ? 'Copiado' : 'Copiar'}</span>
-                    </button>
-                    <a
-                      href={generatedUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      title="Abrir en ventana independiente"
-                      className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
+                      <optgroup label="Google Fonts">
+                        <option value="Open Sans">Open Sans</option>
+                        <option value="Roboto">Roboto</option>
+                        <option value="Montserrat">Montserrat</option>
+                        <option value="Inter">Inter</option>
+                        <option value="Poppins">Poppins</option>
+                        <option value="Outfit">Outfit</option>
+                        <option value="Bebas Neue">Bebas Neue</option>
+                        <option value="Oswald">Oswald</option>
+                        <option value="Rubik">Rubik</option>
+                        <option value="Nunito">Nunito</option>
+                        <option value="Raleway">Raleway</option>
+                        <option value="Ubuntu">Ubuntu</option>
+                      </optgroup>
+                      <optgroup label="System Fonts">
+                        <option value="Arial">Arial</option>
+                        <option value="Impact">Impact</option>
+                        <option value="Arial Black">Arial Black</option>
+                        <option value="Trebuchet MS">Trebuchet MS</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Comic Sans MS">Comic Sans MS</option>
+                        <option value="Courier New">Courier New</option>
+                      </optgroup>
+                      <optgroup label="Pixel Fonts">
+                        <option value="Press Start 2P">Press Start 2P</option>
+                        <option value="Pixelify Sans">Pixelify Sans</option>
+                        <option value="Silkscreen">Silkscreen</option>
+                        <option value="VT323">VT323</option>
+                        <option value="DotGothic16">DotGothic16</option>
+                        <option value="Tiny5">Tiny5</option>
+                        <option value="Jersey 10">Jersey 10</option>
+                        <option value="Jersey 15">Jersey 15</option>
+                        <option value="Jersey 25">Jersey 25</option>
+                        <option value="Micro 5">Micro 5</option>
+                        <option value="Jacquard 12">Jacquard 12</option>
+                        <option value="Rubik Glitch">Rubik Glitch</option>
+                      </optgroup>
+                    </select>
                   </div>
 
-                  <div className="text-xs text-slate-400 bg-slate-900/90 rounded-xl p-3 border border-slate-800 flex items-start gap-2">
-                    <Info className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-semibold text-slate-200">
-                        Cómo usar este estilo en OBS:
-                      </span>
-                      <p className="mt-1 text-slate-400">
-                        Añade una fuente de <b>Navegador (Browser Source)</b> con la URL generada.
-                        Tiene el DOM y las clases exactas de KapChat (
-                        <code className="text-slate-300 font-mono">#chat_box</code>,{' '}
-                        <code className="text-slate-300 font-mono">.chat_line</code>,{' '}
-                        <code className="text-slate-300 font-mono">.nick</code>,{' '}
-                        <code className="text-slate-300 font-mono">.message</code>).
-                      </p>
+                  {/* Size */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[11px] font-bold text-[#8c9cb4]">Font Size</span>
+                      <span className="text-[#5cd0ff] font-mono font-bold">{settings.font.size}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="12"
+                      max="64"
+                      value={settings.font.size}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          font: { ...prev.font, size: parseInt(e.target.value, 10) },
+                        }))
+                      }
+                      className="clean-slider"
+                    />
+                  </div>
+
+                  {/* Color */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-[#8c9cb4] block">Text Color</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={settings.font.color}
+                        onChange={(e) =>
+                          setSettings((prev) => ({
+                            ...prev,
+                            font: { ...prev.font, color: e.target.value },
+                          }))
+                        }
+                        className="w-6 h-6 rounded-[3px] border border-[#283240] bg-transparent cursor-pointer p-0"
+                      />
+                      <input
+                        type="text"
+                        value={settings.font.color}
+                        onChange={(e) =>
+                          setSettings((prev) => ({
+                            ...prev,
+                            font: { ...prev.font, color: e.target.value },
+                          }))
+                        }
+                        className="bg-[#13171f] border border-[#283240] focus:border-[#5cd0ff] rounded-[4px] text-xs text-white font-mono px-2 py-0.5 w-24 outline-none uppercase"
+                      />
                     </div>
                   </div>
-                </>
-              ) : (
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-dashed border-slate-800 text-center text-slate-500 text-sm">
-                  Introduce el canal arriba para generar la URL.
+                </div>
+              )}
+            </div>
+
+            {/* Badges */}
+            <div className="bg-[#1b202a] border border-[#252e3c] rounded-[5px] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleAccordion('badges')}
+                className="w-full py-1.5 px-3 flex items-center justify-between text-left cursor-pointer hover:bg-[#222936] transition"
+              >
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-3.5 h-3.5 text-[#5cd0ff]" />
+                  <span className="font-bold text-xs text-white">Badges</span>
+                </div>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-[#8c9cb4] transition-transform ${
+                    openAccordions.badges ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {openAccordions.badges && (
+                <div className="p-2.5 pt-0 border-t border-[#252e3c] space-y-2">
+                  {/* Twitch Rewards Filter */}
+                  <div className="pt-1.5">
+                    <label className="flex items-center justify-between p-1.5 rounded-[4px] bg-[#13171f] border border-[#283240] cursor-pointer select-none">
+                      <span className="text-xs font-medium text-[#dce4ed]">
+                        Hide Twitch event / drop badges
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={!settings.badges.twitchRewards}
+                        onChange={(e) =>
+                          setSettings((prev) => ({
+                            ...prev,
+                            badges: {
+                              ...prev.badges,
+                              twitchRewards: !e.target.checked,
+                            },
+                          }))
+                        }
+                        className="w-3.5 h-3.5 rounded-[3px] accent-[#5cd0ff]"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Individual Roles */}
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { key: 'broadcaster', label: 'Broadcaster' },
+                      { key: 'moderator', label: 'Moderator' },
+                      { key: 'vip', label: 'VIP' },
+                      { key: 'subscriber', label: 'Subscriber' },
+                      { key: 'artist', label: 'Artist' },
+                      { key: 'turbo', label: 'Turbo' },
+                      { key: 'prime', label: 'Prime' },
+                      { key: 'bits', label: 'Bits' },
+                      { key: 'subGifter', label: 'Sub Gifter' },
+                    ].map(({ key, label }) => {
+                      const enabled = settings.badges[key as keyof typeof settings.badges] ?? true;
+                      return (
+                        <label
+                          key={key}
+                          className={`flex items-center gap-1.5 p-1.5 rounded-[4px] border text-xs cursor-pointer select-none transition ${
+                            enabled
+                              ? 'bg-[#161a22] border-[#3399cc]/40 text-white'
+                              : 'bg-[#12151c] border-[#222834] text-[#6b7b96]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={enabled}
+                            onChange={(e) =>
+                              setSettings((prev) => ({
+                                ...prev,
+                                badges: {
+                                  ...prev.badges,
+                                  [key]: e.target.checked,
+                                },
+                              }))
+                            }
+                            className="w-3 h-3 rounded-[2px] accent-[#5cd0ff]"
+                          />
+                          <span className="truncate">{label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Emotes */}
+            <div className="bg-[#1b202a] border border-[#252e3c] rounded-[5px] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleAccordion('emotes')}
+                className="w-full py-1.5 px-3 flex items-center justify-between text-left cursor-pointer hover:bg-[#222936] transition"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-[#5cd0ff]" />
+                  <span className="font-bold text-xs text-white">Emotes</span>
+                </div>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-[#8c9cb4] transition-transform ${
+                    openAccordions.emotes ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {openAccordions.emotes && (
+                <div className="p-2.5 pt-0 border-t border-[#252e3c]">
+                  <div className="grid grid-cols-2 gap-1.5 pt-1.5">
+                    {[
+                      { key: 'sevenTv', label: '7TV Emotes' },
+                      { key: 'bttv', label: 'BetterTTV Emotes' },
+                      { key: 'ffz', label: 'FrankerFaceZ Emotes' },
+                      { key: 'twitchGifs', label: 'Twitch GIFs' },
+                    ].map(({ key, label }) => {
+                      const enabled = settings.extraEmotes[key as keyof typeof settings.extraEmotes];
+                      return (
+                        <div
+                          key={key}
+                          onClick={() =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              extraEmotes: {
+                                ...prev.extraEmotes,
+                                [key]: !enabled,
+                              },
+                            }))
+                          }
+                          className="flex items-center justify-between p-1.5 rounded-[4px] bg-[#13171f] border border-[#283240] cursor-pointer select-none"
+                        >
+                          <span className="text-xs text-[#dce4ed]">{label}</span>
+                          <div
+                            className={`relative w-7 h-3.5 rounded-full border transition-colors ${
+                              enabled ? 'bg-[#223547] border-[#3399cc]/60' : 'bg-[#1b2029] border-[#2b3340]'
+                            }`}
+                          >
+                            <div
+                              className={`absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full transition-transform ${
+                                enabled ? 'translate-x-3.5 bg-[#5cd0ff]' : 'translate-x-0 bg-[#6b7b96]'
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Messages */}
+            <div className="bg-[#1b202a] border border-[#252e3c] rounded-[5px] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleAccordion('messages')}
+                className="w-full py-1.5 px-3 flex items-center justify-between text-left cursor-pointer hover:bg-[#222936] transition"
+              >
+                <div className="flex items-center gap-2">
+                  <Sliders className="w-3.5 h-3.5 text-[#5cd0ff]" />
+                  <span className="font-bold text-xs text-white">Messages & Delay</span>
+                </div>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-[#8c9cb4] transition-transform ${
+                    openAccordions.messages ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {openAccordions.messages && (
+                <div className="p-2.5 pt-0 border-t border-[#252e3c] space-y-2">
+                  {/* Fade */}
+                  <div className="pt-1.5 space-y-1.5">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-white select-none">
+                      <input
+                        type="checkbox"
+                        checked={settings.message.alwaysShow}
+                        onChange={(e) =>
+                          setSettings((prev) => ({
+                            ...prev,
+                            message: { ...prev.message, alwaysShow: e.target.checked },
+                          }))
+                        }
+                        className="w-3.5 h-3.5 rounded-[2px] accent-[#5cd0ff]"
+                      />
+                      <span>Always show messages (no auto fade)</span>
+                    </label>
+
+                    {!settings.message.alwaysShow && (
+                      <div className="space-y-1 pl-5">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[#8c9cb4]">Fade after:</span>
+                          <span className="text-[#5cd0ff] font-mono font-bold">
+                            {settings.message.hideAfterSeconds}s
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="2"
+                          max="120"
+                          value={settings.message.hideAfterSeconds}
+                          onChange={(e) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              message: {
+                                ...prev.message,
+                                hideAfterSeconds: parseInt(e.target.value, 10),
+                              },
+                            }))
+                          }
+                          className="clean-slider"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delay */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#8c9cb4]">Chat delay:</span>
+                      <span className="text-[#5cd0ff] font-mono font-bold">
+                        {settings.message.chatDelay}s
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="15"
+                      value={settings.message.chatDelay}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          message: {
+                            ...prev.message,
+                            chatDelay: parseInt(e.target.value, 10),
+                          },
+                        }))
+                      }
+                      className="clean-slider"
+                    />
+                  </div>
+
+                  {/* Checkboxes */}
+                  <div className="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-[#252e3c]">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs select-none text-[#dce4ed]">
+                      <input
+                        type="checkbox"
+                        checked={settings.showPlatformIcon}
+                        onChange={(e) =>
+                          setSettings((prev) => ({ ...prev, showPlatformIcon: e.target.checked }))
+                        }
+                        className="w-3 h-3 rounded-[2px] accent-[#5cd0ff]"
+                      />
+                      <span>Twitch icon</span>
+                    </label>
+
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs select-none text-[#dce4ed]">
+                      <input
+                        type="checkbox"
+                        checked={settings.message.animationsEnabled}
+                        onChange={(e) =>
+                          setSettings((prev) => ({
+                            ...prev,
+                            message: { ...prev.message, animationsEnabled: e.target.checked },
+                          }))
+                        }
+                        className="w-3 h-3 rounded-[2px] accent-[#5cd0ff]"
+                      />
+                      <span>Animations</span>
+                    </label>
+
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs select-none text-[#dce4ed]">
+                      <input
+                        type="checkbox"
+                        checked={settings.hideCommonBots}
+                        onChange={(e) =>
+                          setSettings((prev) => ({ ...prev, hideCommonBots: e.target.checked }))
+                        }
+                        className="w-3 h-3 rounded-[2px] accent-[#5cd0ff]"
+                      />
+                      <span>Hide bots</span>
+                    </label>
+
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs select-none text-[#dce4ed]">
+                      <input
+                        type="checkbox"
+                        checked={settings.hideCommands}
+                        onChange={(e) =>
+                          setSettings((prev) => ({ ...prev, hideCommands: e.target.checked }))
+                        }
+                        className="w-3 h-3 rounded-[2px] accent-[#5cd0ff]"
+                      />
+                      <span>Hide '!' commands</span>
+                    </label>
+                  </div>
+
+                  {/* Bad words */}
+                  <div className="space-y-1 pt-1.5 border-t border-[#252e3c]">
+                    <label className="text-[11px] font-bold text-[#8c9cb4] block">Censored Words</label>
+                    <form onSubmit={handleAddBadWord} className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={newBadWord}
+                        onChange={(e) => setNewBadWord(e.target.value)}
+                        placeholder="word to block"
+                        className="flex-1 bg-[#13171f] border border-[#283240] rounded-[4px] text-white px-2 py-0.5 text-xs font-mono outline-none"
+                      />
+                      <button
+                        type="submit"
+                        className="bg-[#242b36] hover:bg-[#2d3746] text-[#5cd0ff] border border-[#3399cc]/40 px-2.5 py-0.5 rounded-[4px] text-xs font-bold transition cursor-pointer"
+                      >
+                        Add
+                      </button>
+                    </form>
+
+                    {settings.customBadWords.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {settings.customBadWords.map((w) => (
+                          <span
+                            key={w}
+                            className="inline-flex items-center gap-1 bg-[#13171f] border border-[#283240] rounded-[3px] text-xs px-1.5 py-0.5 text-[#dce4ed]"
+                          >
+                            <span>{w}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBadWord(w)}
+                              className="text-red-400 hover:text-red-300 font-bold"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Audio Alerts */}
+            <div className="bg-[#1b202a] border border-[#252e3c] rounded-[5px] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleAccordion('notifications')}
+                className="w-full py-1.5 px-3 flex items-center justify-between text-left cursor-pointer hover:bg-[#222936] transition"
+              >
+                <div className="flex items-center gap-2">
+                  <Bell className="w-3.5 h-3.5 text-[#5cd0ff]" />
+                  <span className="font-bold text-xs text-white">Audio Alerts</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-[3px] border ${
+                      settings.notifications.enabled
+                        ? 'bg-[#223547] text-[#5cd0ff] border-[#3399cc]/60'
+                        : 'bg-[#181c24] text-[#6b7b96] border-[#252e3c]'
+                    }`}
+                  >
+                    {settings.notifications.enabled ? 'ON' : 'OFF'}
+                  </span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-[#8c9cb4] transition-transform ${
+                      openAccordions.notifications ? 'rotate-180' : ''
+                    }`}
+                  />
+                </div>
+              </button>
+
+              {openAccordions.notifications && (
+                <div className="p-2.5 pt-0 border-t border-[#252e3c] space-y-2">
+                  <div
+                    onClick={() =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        notifications: {
+                          ...prev.notifications,
+                          enabled: !prev.notifications.enabled,
+                        },
+                      }))
+                    }
+                    className="pt-1.5 flex items-center justify-between p-1.5 rounded-[4px] bg-[#13171f] border border-[#283240] cursor-pointer select-none"
+                  >
+                    <span className="text-xs font-medium text-[#dce4ed]">Play sound on new message</span>
+                    <div
+                      className={`relative w-7 h-3.5 rounded-full border transition-colors ${
+                        settings.notifications.enabled ? 'bg-[#223547] border-[#3399cc]/60' : 'bg-[#1b2029] border-[#2b3340]'
+                      }`}
+                    >
+                      <div
+                        className={`absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full transition-transform ${
+                          settings.notifications.enabled ? 'translate-x-3.5 bg-[#5cd0ff]' : 'translate-x-0 bg-[#6b7b96]'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {settings.notifications.enabled && (
+                    <div className="space-y-2">
+                      <div className="flex gap-1.5">
+                        <select
+                          value={settings.notifications.sound}
+                          onChange={(e) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              notifications: {
+                                ...prev.notifications,
+                                sound: e.target.value,
+                              },
+                            }))
+                          }
+                          className="flex-1 bg-[#13171f] border border-[#283240] rounded-[4px] text-white text-xs px-2 py-1 outline-none cursor-pointer"
+                        >
+                          {AVAILABLE_SOUNDS.map((snd) => (
+                            <option key={snd.id} value={snd.id}>
+                              {snd.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            playNotificationSound(
+                              settings.notifications.sound,
+                              settings.notifications.volume
+                            )
+                          }
+                          className="bg-[#242b36] hover:bg-[#2d3746] text-[#5cd0ff] border border-[#3399cc]/40 px-2.5 py-1 rounded-[4px] text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                        >
+                          <Play className="w-3 h-3" />
+                          <span>Test</span>
+                        </button>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[11px] text-[#8c9cb4]">Volume:</span>
+                          <span className="text-[#5cd0ff] font-mono font-bold">
+                            {settings.notifications.volume}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="100"
+                          value={settings.notifications.volume}
+                          onChange={(e) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              notifications: {
+                                ...prev.notifications,
+                                volume: parseInt(e.target.value, 10),
+                              },
+                            }))
+                          }
+                          className="clean-slider"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Right Column: Live Style Preview Box (5 cols) */}
-          <div className="lg:col-span-5 flex flex-col space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-ping" />
-                Vista Previa del Estilo ({settings.style})
-              </span>
-
-              <div className="flex items-center gap-2">
-                {/* Background switcher for preview */}
-                <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewBg('dark')}
-                    title="Fondo Oscuro (Stream)"
-                    className={`px-2 py-0.5 rounded cursor-pointer ${
-                      previewBg === 'dark' ? 'bg-slate-700 text-white' : 'text-slate-400'
-                    }`}
-                  >
-                    Oscuro
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewBg('white')}
-                    title="Fondo Blanco"
-                    className={`px-2 py-0.5 rounded cursor-pointer ${
-                      previewBg === 'white' ? 'bg-slate-200 text-slate-900' : 'text-slate-400'
-                    }`}
-                  >
-                    Blanco
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewBg('transparent')}
-                    title="Fondo Transparente / Cuadrícula"
-                    className={`px-2 py-0.5 rounded cursor-pointer ${
-                      previewBg === 'transparent' ? 'bg-purple-900 text-purple-200' : 'text-slate-400'
-                    }`}
-                  >
-                    Grid
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSimulateMessage}
-                  className="text-xs bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-purple-200 border border-slate-700 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition cursor-pointer"
-                  title="Generar mensaje de prueba"
-                >
-                  <Send className="w-3 h-3" />
-                  <span>Test</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Container where the style CSS is dynamically rendered */}
-            <div
-              className={`relative rounded-2xl border border-slate-800 shadow-2xl h-[520px] overflow-hidden flex flex-col transition-colors duration-200 ${
-                previewBg === 'white'
-                  ? 'bg-white'
-                  : previewBg === 'dark'
-                  ? 'bg-slate-950'
-                  : 'bg-slate-900'
-              }`}
-            >
-              {/* Optional grid pattern if transparent */}
-              {previewBg === 'transparent' && (
-                <div
-                  className="absolute inset-0 opacity-15 pointer-events-none"
-                  style={{
-                    backgroundImage:
-                      'linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%)',
-                    backgroundSize: '20px 20px',
-                    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-                  }}
-                />
-              )}
-
-              {settings.channel || mockMessages.length > 0 ? (
-                <div className="relative w-full h-full p-2">
+          {/* Right Column: Live Preview (5 cols) */}
+          <div className="lg:col-span-5 space-y-2.5">
+            {/* Stream Scene Preview Card */}
+            <div className="bg-[#1b202a] border border-[#252e3c] rounded-[5px] overflow-hidden">
+              {/* Chat Canvas Frame */}
+              <div
+                className="w-full h-[440px] relative overflow-hidden transition-colors"
+                style={{
+                  backgroundColor: previewBg === 'grid' ? 'transparent' : previewBg,
+                  backgroundImage:
+                    previewBg === 'grid'
+                      ? 'linear-gradient(45deg, #181c24 25%, transparent 25%), linear-gradient(-45deg, #181c24 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #181c24 75%), linear-gradient(-45deg, transparent 75%, #181c24 75%)'
+                      : undefined,
+                  backgroundSize: previewBg === 'grid' ? '16px 16px' : undefined,
+                  backgroundPosition:
+                    previewBg === 'grid' ? '0 0, 0 8px, 8px -8px, -8px 0px' : undefined,
+                }}
+              >
+                <div className="w-full h-full relative">
                   <ChatOverlay
                     settings={settings}
                     isStandalone={false}
@@ -514,35 +1017,43 @@ export const App: React.FC = () => {
                     mockMessages={mockMessages}
                   />
                 </div>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 space-y-2">
-                  <MessageSquare className="w-12 h-12 text-slate-700" />
-                  <p className="text-sm font-medium">Ingresa un canal o pulsa "Test"</p>
-                  <p className="text-xs text-slate-600 max-w-xs">
-                    Renderiza el chat con el estilo activo{' '}
-                    <code className="text-purple-400 font-mono">/chat-styles/{settings.style}/style.css</code>
-                  </p>
+              </div>
+
+              {/* Controls Toolbar */}
+              <div className="p-2 bg-[#141720] border-t border-[#252e3c]">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[11px] text-[#8c9cb4] font-medium">Background:</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewBg('grid')}
+                      className={`px-2 py-0.5 rounded-[3px] text-[11px] font-medium border transition cursor-pointer ${
+                        previewBg === 'grid'
+                          ? 'bg-[#5cd0ff] text-[#0f1722] border-[#5cd0ff] font-bold'
+                          : 'bg-[#1b202a] text-[#dce4ed] border-[#2b3544]'
+                      }`}
+                    >
+                      Transparent
+                    </button>
+                    <input
+                      type="color"
+                      value={previewBg === 'grid' ? '#000000' : previewBg}
+                      onChange={(e) => setPreviewBg(e.target.value)}
+                      className="w-5 h-5 rounded-[3px] border border-[#2b3544] bg-transparent cursor-pointer p-0"
+                    />
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} SuliChat. Open-Source NightDev KapChat Replicate.</p>
-          <div className="flex items-center gap-4">
-            <span className="text-slate-600">DOM 100% compatible con KapChat CSS</span>
-            <a
-              href="https://github.com/svilla33/SuliChat"
-              target="_blank"
-              rel="noreferrer"
-              className="text-purple-400 hover:text-purple-300"
-            >
-              GitHub Repo
-            </a>
+      {/* Static Footer at the bottom */}
+      <footer className="mt-auto border-t border-[#242c3a] bg-[#141720] py-2 px-4">
+        <div className="max-w-[1240px] mx-auto flex items-center justify-between gap-4 text-xs text-[#8c9cb4]">
+          <div className="flex items-center gap-2">
+            <span>Settings apply live to your OBS Browser Source.</span>
           </div>
         </div>
       </footer>

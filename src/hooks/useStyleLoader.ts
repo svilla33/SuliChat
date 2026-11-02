@@ -1,6 +1,16 @@
 import { useEffect } from 'react';
 import { getStyleConfig } from '../styles/registry';
 
+function resolveUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = import.meta.env.BASE_URL.endsWith('/')
+    ? import.meta.env.BASE_URL
+    : `${import.meta.env.BASE_URL}/`;
+  const clean = url.replace(/^\.?\//, '');
+  return `${base}${clean}`;
+}
+
 export function useStyleLoader(styleId: string) {
   useEffect(() => {
     const config = getStyleConfig(styleId);
@@ -13,7 +23,10 @@ export function useStyleLoader(styleId: string) {
       link.rel = 'stylesheet';
       document.head.appendChild(link);
     }
-    link.href = config.cssUrl;
+    const resolvedCss = resolveUrl(config.cssUrl);
+    if (resolvedCss) {
+      link.href = resolvedCss;
+    }
 
     // 2. Inject JS script if provided
     let script = document.getElementById('sulichat-style-script') as HTMLScriptElement | null;
@@ -21,10 +34,11 @@ export function useStyleLoader(styleId: string) {
       script.remove();
     }
 
-    if (config.jsUrl) {
+    const resolvedJs = resolveUrl(config.jsUrl);
+    if (resolvedJs) {
       const newScript = document.createElement('script');
       newScript.id = 'sulichat-style-script';
-      newScript.src = config.jsUrl;
+      newScript.src = resolvedJs;
       newScript.async = true;
       document.body.appendChild(newScript);
     }

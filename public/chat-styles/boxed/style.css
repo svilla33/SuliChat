@@ -1,0 +1,95 @@
+/* ==========================================================================
+   Streamlabs "Boxed" Style
+   Each chat message rendered inside a modern rounded container
+   ========================================================================== */
+
+#chat_box {
+    background-color: transparent;
+    font-family: var(--chat-font-family, 'Inter', 'Segoe UI', Roboto, sans-serif);
+    font-size: var(--chat-font-size, 26px);
+    color: var(--chat-font-color, #ffffff);
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    padding: 12px 16px;
+}
+
+.chat_line {
+    margin: 6px 0;
+    padding: 10px 16px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    background: rgba(18, 24, 32, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.nick {
+    font-weight: 700;
+    margin-right: 2px;
+}
+
+.colon {
+    display: inline;
+    color: rgba(255, 255, 255, 0.6);
+    margin-right: 4px;
+}
+
+.message {
+    display: inline;
+    color: var(--chat-font-color, #ffffff);
+}
+
+.badges {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-right: 6px;
+    gap: 4px;
+}
+
+.tag {
+    height: 1.1em;
+    width: 1.1em;
+    border-radius: 3px;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+.platform-icon {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.emoticon {
+    display: inline-block;
+    vertical-align: -0.22em;
+    height: 1.35em;
+    width: auto;
+    margin: 0 0.15em;
+    object-fit: contain;
+}
+
+.emoticon-zero-width {
+    margin-left: -1.5em !important;
+    pointer-events: none;
+    position: relative;
+    z-index: 2;
+}
+
+.time_stamp {
+    display: none;
+}

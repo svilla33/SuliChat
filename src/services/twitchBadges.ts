@@ -65,6 +65,14 @@ export const STATIC_FALLBACK_BADGES: Record<string, { url: string; title: string
     url: 'https://static-cdn.jtvnw.net/badges/v1/73b5c3fb-24f9-4a82-a852-2f475b59411c/2',
     title: 'Cheer Bits',
   },
+  predictions: {
+    url: 'https://static-cdn.jtvnw.net/badges/v1/e41e57a3-5c82-4217-a068-15cf4649cc7c/2',
+    title: 'Prediction Badge',
+  },
+  'hype-train': {
+    url: 'https://static-cdn.jtvnw.net/badges/v1/59480cb4-77e8-466d-8b06-49a88e404b89/2',
+    title: 'Hype Train',
+  },
 };
 
 const TWITCH_GQL_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';

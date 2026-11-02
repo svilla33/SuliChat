@@ -1,0 +1,42 @@
+{
+  "twitch": {
+    "name": "Twitch",
+    "description": "Classic Twitch chat overlay with subtle shadows."
+  },
+  "boxed": {
+    "name": "Boxed",
+    "description": "Frosted dark floating message bubbles."
+  },
+  "chunky": {
+    "name": "Chunky",
+    "description": "Bold arcade style with thick outlines."
+  },
+  "clean": {
+    "name": "Clean",
+    "description": "Minimalist layout with maximum legibility."
+  },
+  "old-school": {
+    "name": "Old School",
+    "description": "Retro IRC console styling with timestamps."
+  },
+  "colum": {
+    "name": "Colum",
+    "description": "2-column layout: names left, messages right."
+  },
+  "simple": {
+    "name": "KapChat",
+    "description": "Classic NightDev KapChat replica."
+  },
+  "custom1": {
+    "name": "Glass",
+    "description": "Translucent glassmorphism effect."
+  },
+  "custom2": {
+    "name": "Outline",
+    "description": "High-contrast outline for competitive games."
+  },
+  "text-chat": {
+    "name": "Text Chat",
+    "description": "SMS bubbles with colored user pill tags."
+  }
+}
