@@ -1,0 +1,107 @@
+/* ==========================================================================
+   Streamlabs "Colum" Style (Two-Column Table Layout)
+   Left column (35%): Badges & Nickname (right-aligned)
+   Right column (65%): Message text & Emotes (left-aligned)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css?family=Roboto:700');
+
+#chat_box, #log {
+    display: table;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    padding: 0 10px 10px;
+    width: 100%;
+    table-layout: fixed;
+    box-sizing: border-box;
+    font-family: var(--chat-font-family, 'Roboto', 'Arial', sans-serif);
+    font-size: var(--chat-font-size, 26px);
+    font-weight: 500;
+    line-height: 1.5em;
+    color: var(--chat-font-color, #ffffff);
+}
+
+.chat_line, #log > div {
+    display: table-row;
+}
+
+.chat_line.deleted, #log > div.deleted {
+    visibility: hidden;
+}
+
+.colon {
+    display: none !important;
+}
+
+.time_stamp {
+    display: none;
+}
+
+.meta, #log .meta {
+    vertical-align: top;
+    display: table-cell;
+    width: 35%;
+    text-align: right;
+    padding-right: 0.5em;
+    padding-bottom: 0.1em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.message, #log .message {
+    vertical-align: top;
+    display: table-cell;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    width: 65%;
+    padding-bottom: 0.1em;
+    color: var(--chat-font-color, #ffffff);
+}
+
+.badges, .badge {
+    display: inline-block;
+    margin-right: 0.2em;
+    position: relative;
+    height: 1em;
+    vertical-align: middle;
+    top: -0.1em;
+}
+
+.tag {
+    height: 1.1em;
+    width: 1.1em;
+    vertical-align: middle;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.platform-icon {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.nick, .name {
+    margin-left: 0.2em;
+    font-weight: 700;
+}
+
+.emoticon, #log .emote img {
+    display: inline-block !important;
+    vertical-align: -0.22em !important;
+    height: 1.35em !important;
+    width: auto !important;
+    min-height: 20px;
+    margin: 0 0.15em !important;
+    object-fit: contain;
+}
+
+.emoticon-zero-width {
+    margin-left: -1.5em !important;
+    pointer-events: none !important;
+    position: relative;
+    z-index: 2;
+}

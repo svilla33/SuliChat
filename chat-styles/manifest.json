@@ -1,0 +1,75 @@
+[
+  {
+    "id": "twitch",
+    "name": "Twitch",
+    "description": "Classic Twitch chat overlay with subtle shadows.",
+    "cssUrl": "chat-styles/twitch/style.css",
+    "isCustom": false
+  },
+  {
+    "id": "boxed",
+    "name": "Boxed",
+    "description": "Frosted dark floating message bubbles.",
+    "cssUrl": "chat-styles/boxed/style.css",
+    "isCustom": false
+  },
+  {
+    "id": "chunky",
+    "name": "Chunky",
+    "description": "Bold arcade style with thick outlines.",
+    "cssUrl": "chat-styles/chunky/style.css",
+    "isCustom": false
+  },
+  {
+    "id": "clean",
+    "name": "Clean",
+    "description": "Minimalist layout with maximum legibility.",
+    "cssUrl": "chat-styles/clean/style.css",
+    "isCustom": false
+  },
+  {
+    "id": "old-school",
+    "name": "Old School",
+    "description": "Retro IRC console styling with timestamps.",
+    "cssUrl": "chat-styles/old-school/style.css",
+    "isCustom": false
+  },
+  {
+    "id": "colum",
+    "name": "Colum",
+    "description": "2-column layout: names left, messages right.",
+    "cssUrl": "chat-styles/colum/style.css",
+    "isCustom": false
+  },
+  {
+    "id": "simple",
+    "name": "KapChat",
+    "description": "Classic NightDev KapChat replica.",
+    "cssUrl": "chat-styles/simple/style.css",
+    "jsUrl": "chat-styles/simple/script.js",
+    "isCustom": false
+  },
+  {
+    "id": "custom1",
+    "name": "Glass",
+    "description": "Translucent glassmorphism effect.",
+    "cssUrl": "chat-styles/custom1/style.css",
+    "jsUrl": "chat-styles/custom1/script.js",
+    "isCustom": false
+  },
+  {
+    "id": "custom2",
+    "name": "Outline",
+    "description": "High-contrast outline for competitive games.",
+    "cssUrl": "chat-styles/custom2/style.css",
+    "jsUrl": "chat-styles/custom2/script.js",
+    "isCustom": false
+  },
+  {
+    "id": "text-chat",
+    "name": "Text Chat",
+    "description": "SMS bubbles with colored user pill tags.",
+    "cssUrl": "chat-styles/text-chat/style.css",
+    "isCustom": false
+  }
+]
